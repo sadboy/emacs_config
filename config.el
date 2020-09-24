@@ -40,9 +40,6 @@
       set-mark-command-repeat-pop t
       tramp-default-method "sshx"
 
-      magit-auto-revert-mode nil
-      magit-last-seen-setup-instructions "1.4.0"
-
       display-buffer-base-action
       '((display-buffer--maybe-same-window
          display-buffer-reuse-window
@@ -116,5 +113,13 @@
   ;; Corrects (and improves) org-mode's native fontification.
   (doom-themes-org-config))
 
+(use-package magit
+  :config
+  (setq magit-auto-revert-mode nil
+        magit-last-seen-setup-instructions "1.4.0"
+        ))
+
 (use-package ace-jump-mode
   :bind ("C-." . ace-jump-mode))
+
+(provide 'config)
