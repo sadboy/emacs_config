@@ -149,8 +149,8 @@
 
 ;; {{{ Builtin packages:
 (use-package ffap
-  :bind
-  ("C-x C-f" . ffap))
+  :init
+  (ffap-bindings))
 (use-package view
   :bind
   (:map view-mode-map
@@ -282,6 +282,8 @@
   ;;       ("C-r" . counsel-minibuffer-history))
   :config
   (assoc-delete-all 'counsel-yank-pop ivy-height-alist)
+  (setq ffap-file-finder 'counsel-find-file)
+  (setq ffap-directory-finder 'counsel-dired)
   )
 (use-package counsel-projectile :straight t)
 (use-package swiper
@@ -384,12 +386,14 @@
   :bind-keymap
   ("C-x p" . projectile-command-map))
 
+(use-package treemacs-projectile
+  :straight t)
+
 (use-package magit
   :straight t
   :config
   (setq magit-auto-revert-mode nil
-        magit-last-seen-setup-instructions "1.4.0"
-        ))
+        magit-last-seen-setup-instructions "1.4.0"))
 
 (use-package org
   :straight t
