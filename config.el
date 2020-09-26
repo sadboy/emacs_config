@@ -438,6 +438,26 @@
   (add-hook 'prog-mode-hook 'my-prog-mode-hook)
   )
 
+(use-package elisp-mode
+  :bind
+  (:map emacs-lisp-mode-map
+        ("C-c C-b" . eval-current-buffer)
+        ("C-c C-c" . emacs-lisp-byte-compile)
+        ("C-c C-l" . emacs-lisp-byte-compile-and-load)
+        ("C-c C-r" . eval-region)
+        )
+  :config
+  (defun my-emacs-lisp-mode-hook ()
+    (make-local-variable 'company-backends)
+    (setq company-backends
+          '(company-capf company-files company-dabbrev-code company-dabbrev))
+    (make-local-variable 'parens-require-spaces)
+    (local-set-key "\C-xiu" (lambda () (interactive) (insert ";;;###autoload")))
+    (setq parens-require-spaces t
+          tab-width 8))
+  (add-hook 'emacs-lisp-mode-hook 'my-emacs-lisp-mode-hook)
+  )
+
 (use-package cc-mode
   :bind
   (:map c-mode-map
