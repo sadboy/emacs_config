@@ -71,22 +71,12 @@ Optional arg BUFFER has same meaning as for command `shell'."
   (if (not (integerp arg))
       (error "set-tab-width requires an explicit argument")
     (message "Tab width set to %d (was %d)" arg tab-width)
-    (setq fill-column arg)))
+    (setq tab-width arg)))
 
 ;; {{{ highlighting
 (eval-when-compile
-  (require 'hi-lock)
-  (require 'ido))
+  (require 'hi-lock))
 
-;;;###autoload
-(defun my-ido-unhighlight-regexp ()
-  "Unhighlight a regexp using `ido-completing-read'."
-  (interactive)
-  (let ((regexp
-         (ido-completing-read "Regexp to unhighlight: "
-                              (mapcar 'car hi-lock-interactive-patterns)
-                              t t)))
-    (hi-lock-unface-buffer regexp)))
 
 ;; (defvar highlight-faces (list 'hi-gold
 ;;                               'hi-purple
