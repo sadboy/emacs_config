@@ -54,7 +54,6 @@
 
       abbrev-file-name "~/emacs/abbrev_defs"
       save-abbrevs t
-      custom-theme-directory "~/emacs/lisp/themes/"
 
       ispell-process-directory (expand-file-name "~/")
       flyspell-issue-message-flag nil
@@ -66,10 +65,6 @@
       ;; minimap-mode:
       minimap-window-location 'right
       minimap-automatically-delete-window nil
-
-      ;; mc-mode:
-      mc/list-file "~/emacs/mc.list.el"
-      mc/always-run-for-all t
 
       ;; Dired-mode:
       dired-isearch-filenames 'dwim
@@ -152,6 +147,10 @@
 
 ;; }}}
 
+;; {{{ Builtin packages:
+(use-package ffap
+  :bind
+  ("C-x C-f" . ffap))
 (use-package view
   :bind
   (:map view-mode-map
@@ -159,14 +158,43 @@
 (use-package info
   :bind
   (:map Info-mode-map
-        ("S-SPC" . Info-scroll-down)))
+        ("S-SPC" . Info-scroll-down))
+  :config
+  (setq Info-directory-list nil
+        Info-default-directory-list
+        (cons (expand-file-name "~/.local/share/info/")
+              Info-default-directory-list))
+  )
 (use-package whitespace
   :config
   (setq whitespace-style '(face trailing indentation))
   (set-face-attribute 'whitespace-trailing nil :background "dim gray")
   (set-face-attribute 'whitespace-indentation nil :background "grey20")
   )
+(use-package uniquify
+  :config
+  (setq uniquify-buffer-name-style 'post-forward-angle-brackets))
+(use-package linum
+  :bind
+  (:map ctrl-x-comma-map
+        ("l" . linum-mode)))
 (use-package ediff
+  :init
+  (defvar my-ediff-map (make-sparse-keymap))
+  :bind-keymap
+  ("C-x e" . my-ediff-map)
+  :bind
+  (:map my-ediff-map
+        ("e" . kmacro-end-and-call-macro) ; Old binding for \C-xe
+        ("r" . ediff-revision)
+        ("b" . ediff-buffers)
+        ("f" . ediff-files)
+        ("B" . ediff-buffers3)
+        ("F" . ediff-files3)
+        ("=" . ediff-backup)
+        ("p" . ediff-patch-file)
+        ("u" . ediff-patch-buffer)
+        ("j" . dired-jump))
   :config
   (setq ediff-window-setup-function 'ediff-setup-windows-plain)
 
@@ -209,8 +237,12 @@
   (add-hook 'ediff-before-setup-hook 'my-ediff-bsh)
   (add-hook 'ediff-after-setup-windows-hook 'my-ediff-ash 'append)
   (add-hook 'ediff-quit-hook 'my-ediff-qh 'append)
-)
-
+  )
+(use-package wdired
+  :bind
+  (:map dired-mode-map
+        ("C-x C-q" . wdired-change-to-wdired-mode)))
+;; }}}
 
 (use-package flx :straight t)
 
@@ -221,13 +253,15 @@
   :config
   (setq ivy-re-builders-alist
         '((swiper . ivy--regex)
+          (counsel-rg . ivy--regex)
           (t . ivy--regex-fuzzy)))
   (setq ivy-use-virtual-buffers t)
   (setq enable-recursive-minibuffers t)
+  (setq ivy-height 20)
   :bind
   (:map ivy-minibuffer-map
         ("RET" . ivy-alt-done)
-        ("C-o" . ivy-occur))
+        ("C-j" . ivy-immediate-done))
   (:map ctrl-x-comma-map
         ("," . ivy-resume)
         ("r" . ivy-resume)))
@@ -239,30 +273,73 @@
   ("C-h v" . counsel-describe-variable)
   ("C-c i" . counsel-semantic-or-imenu)
   (:map ctrl-x-f-map
+        ("p" . counsel-projectile)
         ("g" . counsel-rg))
+  (:map ctrl-x-comma-map
+        ("SPC" . counsel-mark-ring)
+        ("y" . counsel-yank-pop))
   ;; (:map minibuffer-local-map
   ;;       ("C-r" . counsel-minibuffer-history))
+  :config
+  (assoc-delete-all 'counsel-yank-pop ivy-height-alist)
   )
+(use-package counsel-projectile :straight t)
 (use-package swiper
   :straight t
   :bind
   (:map isearch-mode-map
-        ("M-o" . swiper-from-isearch)))
+        ("C-o" . swiper-from-isearch))
+  :config
+  (use-package multiple-cursors
+    :straight t
+    :config
+    (add-to-list 'mc/cmds-to-run-once 'swiper-mc)
+    ))
 (use-package ivy-rich
   :straight t
   :init
   (ivy-rich-mode t))
 
-(use-package counsel-projectile :straight t)
+(use-package company
+  :straight (company :type git
+                     :host github
+                     :repo "sadboy/company-mode"
+                     :branch "own-master")
+  :bind
+  ("M-/" . company-other-backend)
+  :config
+  (setq company-idle-delay nil
+        company-tooltip-align-annotations t
+        company-show-numbers t
+        company-require-match nil
+        company-auto-commit t
+        company-tooltip-idle-delay .2
+        company-dabbrev-char-regexp "[[:word:]-_]"
+        company-dabbrev-ignore-case t
+        company-dabbrev-downcase nil
+        company-dabbrev-code-ignore-case t
+        company-dabbrev-code-other-buffers 'all
+        company-dabbrev-code-everywhere t
+        company-dabbrev-time-limit .2
+        company-dabbrev-code-time-limit .2)
+  (global-company-mode t))
 
-(use-package treemacs :straight t)
+(use-package treemacs
+  :straight t
+  :bind
+  ("C-S-t" . treemacs))
+
+(use-package minimap
+  :straight t
+  :bind
+  ("C-S-m" . minimap-mode))
 
 (use-package all-the-icons :straight t)
 (use-package all-the-icons-ivy :straight t)
 (use-package all-the-icons-gnus :straight t)
 
 (use-package doom-themes
-  :if window-system
+  ;; :if window-system
   :straight t
   :config
   ;; Global settings (defaults)
@@ -272,15 +349,35 @@
 
   ;; Enable flashing mode-line on errors
   (doom-themes-visual-bell-config)
-  
+
   ;; Enable custom neotree theme (all-the-icons must be installed!)
   (doom-themes-neotree-config)
   ;; or for treemacs users
   (setq doom-themes-treemacs-theme "doom-colors") ; use the colorful treemacs theme
   (doom-themes-treemacs-config)
-  
+
   ;; Corrects (and improves) org-mode's native fontification.
-  (doom-themes-org-config))
+  (doom-themes-org-config)
+
+  ;; Fixup whitespace mode
+  (use-package whitespace
+    :config
+    (set-face-attribute 'whitespace-trailing nil :background "dim gray")
+    (set-face-attribute 'whitespace-indentation nil :background "grey20"))
+
+  ;; Fixup linum mode
+  (use-package linum
+    :config
+    (set-face-foreground 'linum "dark gray")
+    (set-face-background 'linum "dim gray"))
+  ;; Fixup company popup
+  (use-package company
+    :config
+  ;; (set-face-background 'company-tooltip "dim gray")
+  ;; (set-face-foreground 'company-tooltip "dark gray")
+  ;; (set-face-background 'company-tooltip-selection "light blue")
+    (set-face-background 'company-scrollbar-bg "wheat"))
+  )
 
 (use-package projectile
   :straight t
@@ -305,11 +402,25 @@
 
 (use-package markdown-mode :straight t)
 
-(use-package multiple-cursors :straight t)
-
-(use-package ace-jump-mode
+(use-package multiple-cursors
   :straight t
-  :bind ("C-." . ace-jump-mode))
+  :bind
+  ("C-S-<mouse-1>" . mc/add-cursor-on-click)
+  ("M-N" . mc/mark-next-like-this)
+  ("M-P" . mc/mark-previous-like-this)
+  :config
+  ;; (setq mc/list-file "~/.emacs.d/mc.list.el")
+  ;; mc/always-run-for-all t
+  )
+
+(use-package which-key
+  :straight t
+  :init
+  (which-key-mode t))
+
+;; (use-package ace-jump-mode
+;;   :straight t
+;;   :bind ("C-." . ace-jump-mode))
 
 ;; {{{ modes
 (use-package prog-mode
@@ -325,8 +436,60 @@
     (linum-mode t)
     )
   (add-hook 'prog-mode-hook 'my-prog-mode-hook)
-)
+  )
 
+(use-package cc-mode
+  :bind
+  (:map c-mode-map
+        ("RET" . c-context-line-break)
+        ("C-c C-c" . compile)))
+
+(use-package python
+  :config
+  (setq python-indent-offset 4)
+  (defvar my-python-indent-map (make-sparse-keymap))
+  (define-key my-python-indent-map (kbd "<") 'python-indent-shift-left)
+  (define-key my-python-indent-map (kbd ">") 'python-indent-shift-right)
+  (defun my-python-indent ()
+    (interactive)
+    (keymap-command-mode my-python-indent-map t "Shift indentation..."))
+  (define-key python-mode-map (kbd "C-c <") 'my-python-indent)
+  (define-key python-mode-map (kbd "C-c >") 'my-python-indent)
+
+
+  (defun my-python-mode-hook ()
+    (setq python-skeleton-autoinsert nil)
+    (kill-local-variable 'completion-at-point-functions)
+    (make-local-variable 'company-backends)
+    (setq company-backends '(
+                             company-dabbrev-code company-capf company-dabbrev))
+    (subword-mode t)
+    (auto-fill-mode nil)
+    )
+  (add-hook 'python-mode-hook 'my-python-mode-hook)
+  )
+
+(use-package cython-mode
+  :straight t)
+
+(use-package rust-mode
+  :straight t)
+
+(use-package text-mode
+  :config
+  (defun my-text-mode-hook ()
+    (auto-fill-mode 1)
+    (flyspell-mode 1)
+    (setq require-final-newline nil)
+    (modify-syntax-entry ?' ".")
+    (make-local-variable 'company-backends)
+    (setq company-backends
+          (if (fboundp 'company-math-symbols-unicode)
+              '(company-dabbrev-code company-dabbrev
+                                     company-math-symbols-unicode)
+            '(company-dabbrev-code company-dabbrev))))
+  (add-hook 'text-mode-hook 'my-text-mode-hook)
+)
 ;; }}}
 
 (provide 'config)
