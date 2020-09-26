@@ -485,13 +485,35 @@
     (setq python-skeleton-autoinsert nil)
     (kill-local-variable 'completion-at-point-functions)
     (make-local-variable 'company-backends)
-    (setq company-backends '(
-                             company-dabbrev-code company-capf company-dabbrev))
+    (setq company-backends '(company-capf company-dabbrev-code company-dabbrev))
     (subword-mode t)
     (auto-fill-mode nil)
     )
   (add-hook 'python-mode-hook 'my-python-mode-hook)
   )
+
+(use-package pyvenv
+  :straight t
+  :config
+  (setenv "WORKON_HOME" (getenv "PYTHON_VENVS"))
+  (pyvenv-workon "default")
+  :hook
+  (python-mode . (lambda () (pyvenv-mode t))))
+
+(use-package lsp-mode
+  :straight t
+  :config
+  (when (boundp 'read-process-output-max)
+    (setq-default read-process-output-max (* 1024 1024))))
+
+(use-package lsp-python-ms
+  :straight t
+  :config
+  (require 'lsp-python-ms)
+  :hook
+  (python-mode . (lambda ()
+                   (lsp)
+                   (lsp-completion-mode t))))
 
 (use-package cython-mode
   :straight t)
