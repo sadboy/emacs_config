@@ -538,4 +538,19 @@
 )
 ;; }}}
 
+(use-package symbol-overlay
+  :straight (symbol-overlay :fork (:host github
+                                         :repo "sadboy/symbol-overlay"))
+  :init
+  (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
+  (setq symbol-overlay-idle-time 0.1)
+  (setq symbol-overlay-temp-highlight-single t)
+  :bind
+  (:map symbol-overlay-nav-mode-map
+        ("M-H" . symbol-overlay-put))
+  :hook
+  (prog-mode . symbol-overlay-mode)
+  (prog-mode . symbol-overlay-nav-mode)
+  )
+
 (provide 'config)
