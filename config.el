@@ -260,8 +260,7 @@
   (setq ivy-height 20)
   :bind
   (:map ivy-minibuffer-map
-        ("RET" . ivy-alt-done)
-        ("C-j" . ivy-immediate-done))
+        ("RET" . ivy-alt-done))
   (:map ctrl-x-comma-map
         ("," . ivy-resume)
         ("r" . ivy-resume)))
@@ -282,8 +281,6 @@
   ;;       ("C-r" . counsel-minibuffer-history))
   :config
   (assoc-delete-all 'counsel-yank-pop ivy-height-alist)
-  (setq ffap-file-finder 'counsel-find-file)
-  (setq ffap-directory-finder 'counsel-dired)
   )
 (use-package counsel-projectile :straight t)
 (use-package swiper
