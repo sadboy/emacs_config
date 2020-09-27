@@ -492,29 +492,6 @@
   (add-hook 'python-mode-hook 'my-python-mode-hook)
   )
 
-(use-package pyvenv
-  :straight t
-  :config
-  (setenv "WORKON_HOME" (getenv "PYTHON_VENVS"))
-  (pyvenv-workon "default")
-  :hook
-  (python-mode . (lambda () (pyvenv-mode t))))
-
-(use-package lsp-mode
-  :straight t
-  :config
-  (when (boundp 'read-process-output-max)
-    (setq-default read-process-output-max (* 1024 1024))))
-
-(use-package lsp-python-ms
-  :straight t
-  :config
-  (require 'lsp-python-ms)
-  :hook
-  (python-mode . (lambda ()
-                   (lsp)
-                   (lsp-completion-mode t))))
-
 (use-package cython-mode
   :straight t)
 
@@ -538,6 +515,37 @@
 )
 ;; }}}
 
+;; {{{ code utils
+(use-package lsp-mode
+  :straight t
+  :init
+  (setq lsp-keymap-prefix "M-g")
+  :config
+  (when (boundp 'read-process-output-max)
+    (setq-default read-process-output-max (* 1024 1024)))
+  :hook
+  (python-mode . (lambda ()
+                   (lsp)
+                   (lsp-completion-mode t)))
+  )
+
+(use-package lsp-ui
+  :straight t)
+
+(use-package lsp-python-ms
+  :straight t
+  :config
+  (require 'lsp-python-ms)
+)
+
+(use-package pyvenv
+  :straight t
+  :config
+  (setenv "WORKON_HOME" (getenv "PYTHON_VENVS"))
+  (pyvenv-workon "default")
+  :hook
+  (python-mode . (lambda () (pyvenv-mode t))))
+
 (use-package symbol-overlay
   :straight (symbol-overlay :fork (:host github
                                          :repo "sadboy/symbol-overlay"))
@@ -552,5 +560,7 @@
   (prog-mode . symbol-overlay-mode)
   (prog-mode . symbol-overlay-nav-mode)
   )
+
+;; }}}
 
 (provide 'config)
