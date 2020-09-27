@@ -376,6 +376,9 @@
   ;; (set-face-foreground 'company-tooltip "dark gray")
   ;; (set-face-background 'company-tooltip-selection "light blue")
     (set-face-background 'company-scrollbar-bg "wheat"))
+
+  ;; Fixup isearch highlighting
+  (set-face-bold 'lazy-highlight nil)
   )
 
 (use-package projectile
