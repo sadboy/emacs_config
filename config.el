@@ -103,16 +103,14 @@
 (define-key bo-insert-map "f" 'add-file-local-variable)
 (define-key bo-insert-map "l" 'add-file-local-variable-prop-line)
 (define-key bo-insert-map "a" 'auto-insert)
-(define-key bo-insert-map "i" 'ido-insert-file)
+(define-key bo-insert-map "i" 'insert-file)
 (define-key bo-insert-map "d" 'bo-add-dir-local-variable)
 (defvar ctrl-x-f-map (make-sparse-keymap))
 (define-key ctrl-x-f-map "F" 'ffap)
 (define-key ctrl-x-f-map "c" 'set-fill-column)
 (define-key ctrl-x-f-map "t" 'set-tab-width)
 (define-key ctrl-x-f-map "h" 'hexl-mode)
-(define-key ctrl-x-f-map "o" 'helm-occur)
 (define-key ctrl-x-f-map "r" 'revert-buffer)
-(define-key ctrl-x-f-map "d" 'ido-dired)
 (define-key ctrl-x-f-map "s" 'magit-status)
 (define-key ctrl-x-f-map "b" 'magit-blame)
 ;; (define-key ctrl-x-f-map "l" 'calendar)
@@ -166,6 +164,7 @@
               Info-default-directory-list))
   )
 (use-package whitespace
+  :after (doom-themes)
   :config
   (setq whitespace-style '(face trailing indentation))
   (set-face-attribute 'whitespace-trailing nil :background "dim gray")
@@ -326,7 +325,9 @@
 (use-package treemacs
   :straight t
   :bind
-  ("C-S-t" . treemacs))
+  ("C-S-t" . treemacs)
+  (:map ctrl-x-comma-map
+        ("t" . treemacs)))
 
 (use-package minimap
   :straight t
@@ -344,6 +345,8 @@
   ;; Global settings (defaults)
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
         doom-themes-enable-italic t) ; if nil, italics is universally disabled
+  (setq doom-one-brighter-comments t
+        doom-one-brighter-modeline nil)
   (load-theme 'doom-one t)
 
   ;; Enable flashing mode-line on errors
@@ -357,12 +360,6 @@
 
   ;; Corrects (and improves) org-mode's native fontification.
   (doom-themes-org-config)
-
-  ;; Fixup whitespace mode
-  (use-package whitespace
-    :config
-    (set-face-attribute 'whitespace-trailing nil :background "dim gray")
-    (set-face-attribute 'whitespace-indentation nil :background "grey20"))
 
   ;; Fixup linum mode
   (use-package linum
@@ -469,6 +466,8 @@
         ("C-c C-c" . compile)))
 
 (use-package python
+  :mode
+  ("/TARGETS\\'" . python-mode)
   :config
   (setq python-indent-offset 4)
   (defvar my-python-indent-map (make-sparse-keymap))
@@ -497,6 +496,11 @@
 
 (use-package rust-mode
   :straight t)
+
+(use-package cargo
+  :straight t
+  :hook
+  (rust-mode . cargo-minor-mode))
 
 (use-package text-mode
   :config
