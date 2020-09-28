@@ -544,9 +544,8 @@
 
 (use-package pyvenv
   :straight t
-  :config
+  :init
   (setenv "WORKON_HOME" (getenv "PYTHON_VENVS"))
-  (pyvenv-workon "default")
   :hook
   (python-mode . (lambda () (pyvenv-mode t))))
 
