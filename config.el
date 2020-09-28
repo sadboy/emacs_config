@@ -49,7 +49,8 @@
          display-buffer-use-some-window
          display-buffer-pop-up-window)
         . ((reusable-frames . visible)
-           (window-height . fit-window-to-buffer)))
+           (window-height . shrink-window-if-larger-than-buffer)))
+      window-min-height 10
       same-window-regexps '("\\*magit:.*")
 
       abbrev-file-name "~/emacs/abbrev_defs"
@@ -256,7 +257,7 @@
           (t . ivy--regex-fuzzy)))
   (setq ivy-use-virtual-buffers t)
   (setq enable-recursive-minibuffers t)
-  (setq ivy-height 20)
+  (setq ivy-height 30)
   :bind
   (:map ivy-minibuffer-map
         ("RET" . ivy-alt-done))
