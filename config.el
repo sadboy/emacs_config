@@ -525,16 +525,35 @@
   :straight t
   :init
   (setq lsp-keymap-prefix "M-g")
+
   :config
   (when (boundp 'read-process-output-max)
     (setq-default read-process-output-max (* 1024 1024)))
+
+  (defun enable-lsp ()
+    (lsp)
+    (lsp-completion-mode t))
+
   :hook
-  (python-mode . (lambda ()
-                   (lsp)
-                   (lsp-completion-mode t)))
-  )
+  (python-mode . enable-lsp)
+  (rust-mode . enable-lsp)
+)
 
 (use-package lsp-ui
+  :straight t
+  :config
+  (setq lsp-ui-sideline-show-diagnostics t)
+  (setq lsp-ui-sideline-update-mode 'line)
+
+  (setq lsp-ui-doc-use-webkit t)
+
+  (setq lsp-ui-peek-always-show t)
+
+  (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
+  (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
+  )
+
+(use-package dap-mode
   :straight t)
 
 (use-package lsp-python-ms
@@ -563,6 +582,8 @@
   :hook
   (prog-mode . symbol-overlay-mode)
   (prog-mode . symbol-overlay-nav-mode)
+  (text-mode . symbol-overlay-mode)
+  (text-mode . symbol-overlay-nav-mode)
   )
 
 ;; }}}
