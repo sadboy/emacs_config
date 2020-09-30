@@ -193,30 +193,58 @@ trying to acquire the rights with sudo (and tramp)"
         (message "Toggled to new filename: %s" newfilename)))))
 ;; }}}
 
-;; {{{ Auxiliary functions
-;;;###autoload
-(defun keymap-command-mode (keymap &optional dolast prompt)
-  "Makes commands in a keymap repeatable without pressing prefixes."
-  (when dolast
-    (let ((cmd (lookup-key keymap (vector last-command-event))))
-      (if cmd
-          (call-interactively cmd)
-        (error "Unable to locate %s in keymap" last-command-event))))
-  (and prompt (message prompt))
-  (while
-      (let ((cmd (lookup-key keymap (vector (read-event)))))
-        (if (commandp cmd)
-            (or (condition-case err
-                    (call-interactively cmd)
-                  (error (message (cadr err)))) t)
-          (unless (eq cmd 'keymap-command-mode)
-            (setq unread-command-events (list last-input-event)))
-          nil))))
-;; }}}
-
-(defun my-server-visit (files &optional mode))
 
 ;; {{{ Window nav
+;;* Helpers
+(require 'windmove)
+
+;;;###autoload
+(defun hydra-move-splitter-left (arg)
+  "Move window splitter left."
+  (interactive "p")
+  (if (let ((windmove-wrap-around))
+        (windmove-find-other-window 'right))
+      (shrink-window-horizontally arg)
+    (enlarge-window-horizontally arg)))
+
+;;;###autoload
+(defun hydra-move-splitter-right (arg)
+  "Move window splitter right."
+  (interactive "p")
+  (if (let ((windmove-wrap-around))
+        (windmove-find-other-window 'right))
+      (enlarge-window-horizontally arg)
+    (shrink-window-horizontally arg)))
+
+;;;###autoload
+(defun hydra-move-splitter-up (arg)
+  "Move window splitter up."
+  (interactive "p")
+  (if (let ((windmove-wrap-around))
+        (windmove-find-other-window 'up))
+      (enlarge-window arg)
+    (shrink-window arg)))
+
+;;;###autoload
+(defun hydra-move-splitter-down (arg)
+  "Move window splitter down."
+  (interactive "p")
+  (if (let ((windmove-wrap-around))
+        (windmove-find-other-window 'up))
+      (shrink-window arg)
+    (enlarge-window arg)))
+
+(defvar rectangle-mark-mode)
+;;;###autoload
+(defun hydra-ex-point-mark ()
+  "Exchange point and mark."
+  (interactive)
+  (if rectangle-mark-mode
+      (rectangle-exchange-point-and-mark)
+    (let ((mk (mark)))
+      (rectangle-mark-mode 1)
+      (goto-char mk))))
+
 (defvar my-window-control-map (make-sparse-keymap))
 (define-key my-window-control-map (kbd "o") 'other-window)
 (define-key my-window-control-map (kbd "[?\\t]") 'keymap-command-mode)
@@ -238,15 +266,6 @@ trying to acquire the rights with sudo (and tramp)"
 (define-key my-window-control-map "<" 'scroll-left)
 (define-key my-window-control-map ">" 'scroll-right)
 
-;;;###autoload
-(defun my-window-control-cmd ()
-  (interactive)
-  (keymap-command-mode my-window-control-map t "Window Control"))
-
-;;;###autoload
-(defun my-other-window ()
-  (interactive)
-  (other-window 1 t))
 ;; }}}
 
 ;; {{{ Buffer Nav
@@ -289,68 +308,6 @@ WINDOW must be a live window and defaults to the selected one."
             (funcall set-buffers
                      window (cons entry (funcall get-buffers window)))))))))
 
-(defun my-display-buffer-find-some-window (buf alist))
-
-;;;###autoload
-(defun window-history-back (&optional win)
-  (interactive)
-  (let* ((prev-bufs (window-prev-buffers win))
-         (target (car prev-bufs)))
-    (if target
-        (let ((buffer (car target))
-              (winpos (cadr target))
-              (ptpos (car (cddr target))))
-          (when (buffer-live-p buffer)
-            (let ((window-buffer-need-record 'next))
-              (set-window-buffer win buffer))
-            (set-window-start win winpos)
-            (set-window-point win ptpos))
-          (set-window-prev-buffers win (cdr prev-bufs)))
-      (message "Backward history empty."))))
-
-;;;###autoload
-(defun window-history-forward (&optional win)
-  (interactive)
-  (let* ((next-bufs (window-next-buffers win))
-         (target (car next-bufs)))
-    (if target
-        (let ((buffer (car target))
-              (winpos (cadr target))
-              (ptpos (car (cddr target))))
-          (when (buffer-live-p buffer)
-            (set-window-buffer win buffer)
-            (set-window-start win winpos)
-            (set-window-point win ptpos))
-          (set-window-next-buffers win (cdr next-bufs)))
-      (message "Forward history empty."))))
-
-;;;###autoload
-(defun other-window-history-back ()
-  (interactive)
-  (let ((win (next-window nil nil 'visible)))
-    (when win
-      (window-history-back win))))
-
-;;;###autoload
-(defun other-window-history-forward ()
-  (interactive)
-  (let ((win (next-window nil nil 'visible)))
-    (when win
-      (window-history-forward win))))
-
-;;;###autoload
-(defvar window-history-navigation-map
-  (let ((keymap (make-sparse-keymap)))
-    (define-key keymap "<" 'window-history-back)
-    (define-key keymap ">" 'window-history-forward)
-    (define-key keymap "M-<" 'other-window-history-back)
-    (define-key keymap "M->" 'other-window-history-forward)
-    keymap))
-
-;;;###autoload
-(defun window-history-navigation ()
-  (interactive)
-  (keymap-command-mode window-history-navigation-map t "Buffer history:"))
 ;; }}}
 
 ;; {{{ Help buffer nav

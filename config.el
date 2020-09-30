@@ -1,5 +1,4 @@
-(eval-when-compile
-  (require 'use-package))
+(eval-when-compile (require 'use-package))
 
 (setq-default abbrev-mode t
               major-mode 'text-mode
@@ -129,21 +128,10 @@
 (global-set-key (kbd "<C-S-left>")   'buf-move-left)
 (global-set-key (kbd "<C-S-right>")  'buf-move-right)
 
-(global-set-key "\C-xo" 'my-window-control-cmd)
-(global-set-key "\C-xw" 'my-window-control-cmd)
-(global-set-key "\C-x^" 'my-window-control-cmd)
-(global-set-key "\C-x{" 'my-window-control-cmd)
-(global-set-key "\C-x}" 'my-window-control-cmd)
-;; (global-set-key "\C-x<" 'my-window-control-cmd)
-;; (global-set-key "\C-x>" 'my-window-control-cmd)
-
 (global-set-key (kbd "C-<") 'previous-buffer)
 (global-set-key (kbd "C->") 'next-buffer)
 (global-set-key (kbd "C-M-<") 'other-window-history-back)
 (global-set-key (kbd "C-M->") 'other-window-history-forward)
-(global-set-key "\C-x<" 'window-history-navigation)
-(global-set-key "\C-x>" 'window-history-navigation)
-
 ;; }}}
 
 ;; {{{ Builtin packages:
@@ -242,6 +230,12 @@
   :bind
   (:map dired-mode-map
         ("C-x C-q" . wdired-change-to-wdired-mode)))
+(use-package winner
+  :demand t
+  :config
+  (setq winner-dont-bind-my-keys t)
+  (winner-mode t)
+  (setq winner-ring-size 12))
 ;; }}}
 
 (use-package flx :straight t)
@@ -322,6 +316,148 @@
         company-dabbrev-time-limit .2
         company-dabbrev-code-time-limit .2)
   (global-company-mode t))
+
+(use-package ace-window
+  :straight t)
+
+(use-package buffer-move
+  :straight t
+  :config
+  (setq buffer-move-stay-after-swap t))
+
+(use-package basic
+  :after hydra
+  :demand t
+  :config
+  (defhydra hydra-window ()
+;;     "
+;; Movement^^        ^Split^         ^Switch^		^Resize^
+;; ----------------------------------------------------------------
+;; _h_ ←       	_v_ertical    	_b_uffer		_H_ X←
+;; _j_ ↓        	_x_ horizontal	_f_ind files	_J_ X↓
+;; _k_ ↑        	_z_ undo      			_K_ X↑
+;; _l_ →        	_Z_ reset      			_L_ X→
+;; _F_ollow	   	_S_ave		max_i_mize
+;; _SPC_ cancel	_1_ only this   	_d_elete	
+;; "
+    ("h" windmove-left)
+    ("j" windmove-down)
+    ("k" windmove-up)
+    ("l" windmove-right)
+    ("H" buf-move-left)
+    ("J" buf-move-down)
+    ("K" buf-move-up)
+    ("L" buf-move-right)
+    ("C-h" hydra-move-splitter-left)
+    ("C-j" hydra-move-splitter-down)
+    ("C-k" hydra-move-splitter-up)
+    ("C-l" hydra-move-splitter-right)
+    ("{" hydra-move-splitter-left)
+    ("_" hydra-move-splitter-down)
+    ("^" hydra-move-splitter-up)
+    ("}" hydra-move-splitter-right)
+    ("-" shrink-window-if-larger-than-buffer)
+    ("=" balance-windows)
+    ("[" (lambda () (interactive) (scroll-left 8)))
+    ("]" (lambda () (interactive) (scroll-right 8)))
+    ("C--" text-scale-decrease)
+    ("C-=" text-scale-increase)
+
+    ("o" other-window)
+
+    ("F" follow-mode)
+    ("b" ivy-switch-buffer)
+    ("M-k" kill-current-buffer)
+    ("f" counsel-find-file)
+    ("<" previous-buffer)
+    (">" next-buffer)
+
+    ;; ("a" (lambda ()
+    ;;        (interactive)
+    ;;        (ace-window 1)
+    ;;        (add-hook 'ace-window-end-once-hook
+    ;;                  'hydra-window/body)))
+
+    ("v" (lambda ()
+           (interactive)
+           (split-window-right)
+           (windmove-right))
+     )
+    ("x" (lambda ()
+           (interactive)
+           (split-window-below)
+           (windmove-down))
+     )
+    ;; ("s" (lambda ()
+    ;;        (interactive)
+    ;;        (ace-window 4)
+    ;;        (add-hook 'ace-window-end-once-hook
+    ;;                  'hydra-window/body)))
+    ("S" save-buffer)
+    ("1" delete-other-windows)
+    ("2" split-window-below)
+    ("3" split-window-right)
+    ("0" delete-window)
+
+    ;; ("D" (lambda ()
+    ;;        (interactive)
+    ;;        (ace-window 16)
+    ;;        (add-hook 'ace-window-end-once-hook
+    ;;                  'hydra-window/body)))
+
+    ("i" ace-maximize-window)
+    ("/" (progn
+           (winner-undo)
+           (setq this-command 'winner-undo))
+     )
+    ("y" winner-redo)
+    ;; ("SPC" nil)
+    )
+
+  (defhydra hydra-next-error (global-map "M-g")
+    "next-error"
+    ("n" next-error "next")
+    ("p" previous-error "previous"))
+
+  (defhydra hydra-rectangle (:body-pre (rectangle-mark-mode 1)
+                                       :color pink
+                                       :post (deactivate-mark))
+    "
+  ^_k_^     _d_elete    s_t_ring
+_h_   _l_   _o_k        _y_ank
+  ^_j_^     _n_ew-copy  _r_eset
+^^^^        _e_xchange  _u_ndo
+^^^^        ^ ^         _x_kill
+"
+    ("h" rectangle-backward-char nil)
+    ("l" rectangle-forward-char nil)
+    ("k" rectangle-previous-line nil)
+    ("j" rectangle-next-line nil)
+    ("e" hydra-ex-point-mark nil)
+    ("n" copy-rectangle-as-kill nil)
+    ("d" delete-rectangle nil)
+    ("r" (if (region-active-p)
+             (deactivate-mark)
+           (rectangle-mark-mode 1)) nil)
+    ("y" yank-rectangle nil)
+    ("u" undo nil)
+    ("t" string-rectangle nil)
+    ("x" kill-rectangle nil)
+    ("o" nil nil))
+
+  (global-set-key (kbd "C-x w") 'hydra-window/body)
+  (global-set-key (kbd "C-x SPC") 'hydra-rectangle/body)
+  (global-set-key (kbd "C-x o") 'hydra-window/other-window)
+  (global-set-key (kbd "C-x <") 'hydra-window/previous-buffer)
+  (global-set-key (kbd "C-x >") 'hydra-window/next-buffer)
+  (global-set-key (kbd "C-x C--") 'hydra-window/text-scale-decrease)
+  (global-set-key (kbd "C-x C-=") 'hydra-window/text-scale-increase)
+  (global-set-key (kbd "C-x {") 'hydra-window/hydra-move-splitter-left)
+  (global-set-key (kbd "C-x }") 'hydra-window/hydra-move-splitter-right)
+  )
+
+(use-package ivy-hydra
+  :straight t)
 
 (use-package treemacs
   :straight t
@@ -471,15 +607,6 @@
   ("/TARGETS\\'" . python-mode)
   :config
   (setq python-indent-offset 4)
-  (defvar my-python-indent-map (make-sparse-keymap))
-  (define-key my-python-indent-map (kbd "<") 'python-indent-shift-left)
-  (define-key my-python-indent-map (kbd ">") 'python-indent-shift-right)
-  (defun my-python-indent ()
-    (interactive)
-    (keymap-command-mode my-python-indent-map t "Shift indentation..."))
-  (define-key python-mode-map (kbd "C-c <") 'my-python-indent)
-  (define-key python-mode-map (kbd "C-c >") 'my-python-indent)
-
 
   (defun my-python-mode-hook ()
     (setq python-skeleton-autoinsert nil)
@@ -490,6 +617,11 @@
     (auto-fill-mode nil)
     )
   (add-hook 'python-mode-hook 'my-python-mode-hook)
+
+  (defhydra hydra-python (python-mode-map "C-c")
+    "Shift indentation"
+    ("<" python-indent-shift-left)
+    (">" python-indent-shift-right))
   )
 
 (use-package cython-mode
