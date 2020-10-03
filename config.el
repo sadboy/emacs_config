@@ -1,12 +1,21 @@
 (eval-when-compile (require 'use-package))
 
 (setq-default abbrev-mode t
+              bidi-paragraph-direction 'left-to-right
               major-mode 'text-mode
               indent-tabs-mode nil
               tab-width 8
               fill-column 76
               default-directory "~/")
 
+(setq display-buffer-base-action
+      '((display-buffer--maybe-same-window
+         display-buffer-reuse-window
+         display-buffer--maybe-pop-up-frame-or-window
+         display-buffer-use-some-window
+         display-buffer-pop-up-window)
+        . ((reusable-frames . visible)))
+      )
 (setq package-enable-at-startup nil
       ;; Don't change default temp directory on Mac:
       ;; temporary-file-directory (concat "/tmp/emacs_" (getenv "USER") "/")
@@ -41,16 +50,8 @@
       set-mark-command-repeat-pop t
       tramp-default-method "sshx"
 
-      display-buffer-base-action
-      '((display-buffer--maybe-same-window
-         display-buffer-reuse-window
-         display-buffer--maybe-pop-up-frame-or-window
-         display-buffer-use-some-window
-         display-buffer-pop-up-window)
-        . ((reusable-frames . visible)
-           (window-height . shrink-window-if-larger-than-buffer)))
       window-min-height 10
-      same-window-regexps '("\\*magit:.*")
+      same-window-regexps '("magit:.*")
 
       abbrev-file-name "~/emacs/abbrev_defs"
       save-abbrevs t
@@ -132,12 +133,18 @@
 (global-set-key (kbd "C->") 'next-buffer)
 (global-set-key (kbd "C-M-<") 'other-window-history-back)
 (global-set-key (kbd "C-M->") 'other-window-history-forward)
+;; For terminal:
+(global-set-key (kbd "<f7>") 'previous-buffer)
+(global-set-key (kbd "<f8>") 'next-buffer)
 ;; }}}
 
 ;; {{{ Builtin packages:
 (use-package ffap
   :init
-  (ffap-bindings))
+  (ffap-bindings)
+  :bind
+  (:map ctrl-x-f-map
+        ("l" . find-file-literally-at-point)))
 (use-package view
   :bind
   (:map view-mode-map
@@ -251,7 +258,7 @@
           (t . ivy--regex-fuzzy)))
   (setq ivy-use-virtual-buffers t)
   (setq enable-recursive-minibuffers t)
-  (setq ivy-height 30)
+  (setq ivy-height 25)
   :bind
   (:map ivy-minibuffer-map
         ("RET" . ivy-alt-done))
@@ -411,7 +418,6 @@
            (setq this-command 'winner-undo))
      )
     ("y" winner-redo)
-    ;; ("SPC" nil)
     )
 
   (defhydra hydra-next-error (global-map "M-g")
@@ -419,22 +425,24 @@
     ("n" next-error "next")
     ("p" previous-error "previous"))
 
-  (defhydra hydra-rectangle (:body-pre (rectangle-mark-mode 1)
-                                       :color pink
-                                       :post (deactivate-mark))
+  (defhydra hydra-rectangle (:body-pre (progn
+                                         (rectangle-mark-mode 1)
+                                         (activate-mark))
+                             :color pink
+                             :post (deactivate-mark))
     "
   ^_k_^     _d_elete    s_t_ring
 _h_   _l_   _o_k        _y_ank
-  ^_j_^     _n_ew-copy  _r_eset
+  ^_j_^     ne_w_-copy  _r_eset
 ^^^^        _e_xchange  _u_ndo
-^^^^        ^ ^         _x_kill
+^^^^        _q_uit      _x_kill
 "
     ("h" rectangle-backward-char nil)
     ("l" rectangle-forward-char nil)
     ("k" rectangle-previous-line nil)
     ("j" rectangle-next-line nil)
     ("e" hydra-ex-point-mark nil)
-    ("n" copy-rectangle-as-kill nil)
+    ("w" copy-rectangle-as-kill nil)
     ("d" delete-rectangle nil)
     ("r" (if (region-active-p)
              (deactivate-mark)
@@ -443,7 +451,34 @@ _h_   _l_   _o_k        _y_ank
     ("u" undo nil)
     ("t" string-rectangle nil)
     ("x" kill-rectangle nil)
-    ("o" nil nil))
+    ("o" nil nil)
+    ("q" nil nil))
+
+  (global-set-key (kbd "s-h") 'windmove-left)
+  (global-set-key (kbd "s-j") 'windmove-down)
+  (global-set-key (kbd "s-k") 'windmove-up)
+  (global-set-key (kbd "s-l") 'windmove-right)
+  (global-set-key (kbd "s-H") 'buf-move-left)
+  (global-set-key (kbd "s-J") 'buf-move-down)
+  (global-set-key (kbd "s-K") 'buf-move-up)
+  (global-set-key (kbd "s-L") 'buf-move-right)
+  (global-set-key (kbd "C-s-h") 'hydra-move-splitter-left)
+  (global-set-key (kbd "C-s-j") 'hydra-move-splitter-down)
+  (global-set-key (kbd "C-s-k") 'hydra-move-splitter-up)
+  (global-set-key (kbd "C-s-l") 'hydra-move-splitter-right)
+  ;; For terminal:
+  (global-set-key (kbd "<f9>") 'windmove-left)
+  (global-set-key (kbd "<f10>") 'windmove-down)
+  (global-set-key (kbd "<f11>") 'windmove-up)
+  (global-set-key (kbd "<f12>") 'windmove-right)
+  (global-set-key (kbd "S-<f9>") 'buf-move-left)
+  (global-set-key (kbd "S-<f10>") 'buf-move-down)
+  (global-set-key (kbd "S-<f11>") 'buf-move-up)
+  (global-set-key (kbd "S-<f12>") 'buf-move-right)
+  (global-set-key (kbd "C-<f9>") 'hydra-move-splitter-left)
+  (global-set-key (kbd "C-<f10>") 'hydra-move-splitter-down)
+  (global-set-key (kbd "C-<f11>") 'hydra-move-splitter-up)
+  (global-set-key (kbd "C-<f12>") 'hydra-move-splitter-right)
 
   (global-set-key (kbd "C-x w") 'hydra-window/body)
   (global-set-key (kbd "C-x SPC") 'hydra-rectangle/body)
@@ -585,6 +620,7 @@ _h_   _l_   _o_k        _y_ank
         ("C-c C-r" . eval-region)
         )
   :config
+  (setq lisp-indent-function 'common-lisp-indent-function)
   (defun my-emacs-lisp-mode-hook ()
     (make-local-variable 'company-backends)
     (setq company-backends
@@ -702,21 +738,39 @@ _h_   _l_   _o_k        _y_ank
   (python-mode . (lambda () (pyvenv-mode t))))
 
 (use-package symbol-overlay
-  :straight (symbol-overlay :fork (:host github
-                                         :repo "sadboy/symbol-overlay"))
-  :init
-  (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
-  (setq symbol-overlay-idle-time 0.1)
-  (setq symbol-overlay-temp-highlight-single t)
-  :bind
-  (:map symbol-overlay-nav-mode-map
-        ("M-H" . symbol-overlay-put))
-  :hook
-  (prog-mode . symbol-overlay-mode)
-  (prog-mode . symbol-overlay-nav-mode)
-  (text-mode . symbol-overlay-mode)
-  (text-mode . symbol-overlay-nav-mode)
-  )
+    :straight (symbol-overlay
+               :fork (:host github
+                            :repo "sadboy/symbol-overlay"))
+    :init
+    (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
+    (setq symbol-overlay-idle-time 0.1)
+    (setq symbol-overlay-temp-highlight-single t)
+    :config
+    (setq symbol-overlay-inhibit-map t)
+    (defhydra symbol-hydra (global-map "M-s")
+      ("i" symbol-overlay-put)
+      ("h" symbol-overlay-map-help)
+      ("p" symbol-overlay-jump-prev)
+      ("n" symbol-overlay-jump-next)
+      ("<" symbol-overlay-jump-first)
+      (">" symbol-overlay-jump-last)
+      ("w" symbol-overlay-save-symbol)
+      ("t" symbol-overlay-toggle-in-scope)
+      ("e" symbol-overlay-echo-mark)
+      ("d" symbol-overlay-jump-to-definition)
+      ("s" symbol-overlay-isearch-literally)
+      ("q" symbol-overlay-query-replace)
+      ("r" symbol-overlay-rename)
+      )
+    :bind
+    ("M-H" . (lambda ()
+               (interactive)
+               (symbol-overlay-put)
+               (symbol-hydra/body)))
+    :hook
+    (prog-mode . symbol-overlay-mode)
+    (text-mode . symbol-overlay-mode)
+    )
 
 ;; }}}
 
