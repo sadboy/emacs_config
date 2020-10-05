@@ -1,4 +1,5 @@
 (eval-when-compile
+  (require 'cl-lib)
   (require 'use-package)
   (require 'hydra))
 
@@ -103,6 +104,7 @@
 (global-set-key "\C-x\C-q" 'really-toggle-read-only)
 (global-set-key "\C-xW" 'w3m)
 (global-set-key "\C-xg" 'rgrep)
+(global-set-key (kbd "M-s M-s") 'isearch-forward-symbol-at-point)
 
 (defvar bo-insert-map (make-sparse-keymap))
 (define-key bo-insert-map "f" 'add-file-local-variable)
@@ -251,6 +253,17 @@
 
 (use-package flx :straight t)
 
+(use-package multiple-cursors
+  :straight t
+  :bind
+  ("C-S-<mouse-1>" . mc/add-cursor-on-click)
+  ("M-N" . mc/mark-next-like-this)
+  ("M-P" . mc/mark-previous-like-this)
+  :config
+  ;; (setq mc/list-file "~/.emacs.d/mc.list.el")
+  ;; mc/always-run-for-all t
+  )
+
 (use-package ivy
   :straight t
   :init
@@ -293,12 +306,13 @@
   :bind
   (:map isearch-mode-map
         ("C-o" . swiper-from-isearch))
+  ("M-s M-o" . swiper-thing-at-point)
   :config
   (use-package multiple-cursors
-    :straight t
     :config
-    (add-to-list 'mc/cmds-to-run-once 'swiper-mc)
-    ))
+    (cl-pushnew 'swiper-mc mc--default-cmds-to-run-once)
+    )
+  )
 (use-package ivy-rich
   :straight t
   :init
@@ -579,17 +593,6 @@ _h_   _l_   _o_k        _y_ank
 
 (use-package markdown-mode :straight t)
 
-(use-package multiple-cursors
-  :straight t
-  :bind
-  ("C-S-<mouse-1>" . mc/add-cursor-on-click)
-  ("M-N" . mc/mark-next-like-this)
-  ("M-P" . mc/mark-previous-like-this)
-  :config
-  ;; (setq mc/list-file "~/.emacs.d/mc.list.el")
-  ;; mc/always-run-for-all t
-  )
-
 (use-package which-key
   :straight t
   :init
@@ -663,6 +666,10 @@ _h_   _l_   _o_k        _y_ank
     ("<" python-indent-shift-left)
     (">" python-indent-shift-right))
   )
+
+(use-package antlr-mode
+  :mode
+  ("\\.g4\\'" . antlr-mode))
 
 (use-package cython-mode
   :straight t)
@@ -751,21 +758,39 @@ _h_   _l_   _o_k        _y_ank
     (setq symbol-overlay-temp-highlight-single t)
     :config
     (setq symbol-overlay-inhibit-map t)
-    (defhydra symbol-hydra (global-map "M-s")
+    (defhydra symbol-hydra (global-map "M-s"
+                                       :color pink)
       ("i" symbol-overlay-put)
       ("h" symbol-overlay-map-help)
       ("p" symbol-overlay-jump-prev)
       ("n" symbol-overlay-jump-next)
       ("<" symbol-overlay-jump-first)
       (">" symbol-overlay-jump-last)
-      ("w" symbol-overlay-save-symbol)
+      ("M-w" symbol-overlay-save-symbol)
       ("t" symbol-overlay-toggle-in-scope)
       ("e" symbol-overlay-echo-mark)
-      ("d" symbol-overlay-jump-to-definition)
-      ("s" symbol-overlay-isearch-literally)
-      ("q" symbol-overlay-query-replace)
-      ("r" symbol-overlay-rename)
+      ("M-." symbol-overlay-jump-to-definition)
+      ("%" symbol-overlay-query-replace)
+      ("M-r" symbol-overlay-rename)
+
+      ("M-n" mc/mark-next-like-this-symbol)
+      ("M-N" mc/unmark-next-like-this)
+      ("M-p" mc/mark-previous-like-this-symbol)
+      ("M-P" mc/unmark-previous-like-this)
+
+      ("q" nil nil)
       )
+
+    (use-package multiple-cursors
+      :config
+      (let ((once-hydras '(symbol-hydra/mc/mark-previous-like-this-symbol
+                           symbol-hydra/mc/unmark-previous-like-this
+                           symbol-hydra/mc/mark-next-like-this-symbol
+                           symbol-hydra/mc/unmark-next-like-this)))
+        (mapcar
+         (lambda (x) (cl-pushnew x mc--default-cmds-to-run-once))
+         once-hydras)))
+
     :bind
     ("M-H" . (lambda ()
                (interactive)
