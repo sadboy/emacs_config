@@ -1,4 +1,6 @@
-(eval-when-compile (require 'use-package))
+(eval-when-compile
+  (require 'use-package)
+  (require 'hydra))
 
 (setq-default abbrev-mode t
               bidi-paragraph-direction 'left-to-right
@@ -59,6 +61,8 @@
       ispell-process-directory (expand-file-name "~/")
       flyspell-issue-message-flag nil
       flymake-start-syntax-check-on-newline nil
+
+      compilation-scroll-output 'first-error
 
       ;; eldoc-mode
       eldoc-idle-delay 0.1
@@ -475,10 +479,10 @@ _h_   _l_   _o_k        _y_ank
   (global-set-key (kbd "S-<f10>") 'buf-move-down)
   (global-set-key (kbd "S-<f11>") 'buf-move-up)
   (global-set-key (kbd "S-<f12>") 'buf-move-right)
-  (global-set-key (kbd "C-<f9>") 'hydra-move-splitter-left)
-  (global-set-key (kbd "C-<f10>") 'hydra-move-splitter-down)
-  (global-set-key (kbd "C-<f11>") 'hydra-move-splitter-up)
-  (global-set-key (kbd "C-<f12>") 'hydra-move-splitter-right)
+  (global-set-key (kbd "M-<f9>") 'hydra-move-splitter-left)
+  (global-set-key (kbd "M-<f10>") 'hydra-move-splitter-down)
+  (global-set-key (kbd "M-<f11>") 'hydra-move-splitter-up)
+  (global-set-key (kbd "M-<f12>") 'hydra-move-splitter-right)
 
   (global-set-key (kbd "C-x w") 'hydra-window/body)
   (global-set-key (kbd "C-x SPC") 'hydra-rectangle/body)
@@ -620,7 +624,7 @@ _h_   _l_   _o_k        _y_ank
         ("C-c C-r" . eval-region)
         )
   :config
-  (setq lisp-indent-function 'common-lisp-indent-function)
+  ;; (setq lisp-indent-function 'common-lisp-indent-function)
   (defun my-emacs-lisp-mode-hook ()
     (make-local-variable 'company-backends)
     (setq company-backends
