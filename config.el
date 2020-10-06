@@ -155,6 +155,11 @@
   :bind
   (:map view-mode-map
         ("S-SPC" . View-scroll-page-backward)))
+(use-package isearch
+  :bind
+  (:map isearch-mode-map
+        ("M-<" . isearch-beginning-of-buffer)
+        ("M->" . isearch-end-of-buffer)))
 (use-package info
   :bind
   (:map Info-mode-map
@@ -299,15 +304,33 @@
   ;;       ("C-r" . counsel-minibuffer-history))
   :config
   (assoc-delete-all 'counsel-yank-pop ivy-height-alist)
+
+  (use-package isearch
+    :config
+    (defun do-counsel-from-isearch ()
+      "Invoke `counsel-rg' from isearch."
+      (interactive)
+      (let ((query (if isearch-regexp
+                       isearch-string
+                     (if (eq isearch-regexp-function)
+                         (funcall isearch-regexp-function isearch-string)
+                       (regexp-quote isearch-string)))))
+        (isearch-exit)
+        (counsel-rg query nil "-P")))
+    (define-key isearch-mode-map
+      (kbd "M-o")  'do-counsel-from-isearch))
   )
-(use-package counsel-projectile :straight t)
+(use-package counsel-projectile
+  :straight t
+  :config
+  (setq counsel-projectile-rg-initial-input '(projectile-symbol-or-selection-at-point)))
 (use-package swiper
   :straight t
   :bind
   (:map isearch-mode-map
         ("C-o" . swiper-from-isearch))
-  ("M-s M-o" . swiper-thing-at-point)
   :config
+  (global-set-key (kbd "M-s M-o") 'swiper-thing-at-point)
   (use-package multiple-cursors
     :config
     (cl-pushnew 'swiper-mc mc--default-cmds-to-run-once)
@@ -499,7 +522,10 @@ _h_   _l_   _o_k        _y_ank
   (global-set-key (kbd "M-<f12>") 'hydra-move-splitter-right)
 
   (global-set-key (kbd "C-x w") 'hydra-window/body)
-  (global-set-key (kbd "C-x SPC") 'hydra-rectangle/body)
+  (global-set-key (kbd "C-x 1") 'hydra-window/delete-other-windows)
+  (global-set-key (kbd "C-x 2") 'hydra-window/split-window-below)
+  (global-set-key (kbd "C-x 3") 'hydra-window/split-window-right)
+  (global-set-key (kbd "C-x 0") 'hydra-window/delete-window)
   (global-set-key (kbd "C-x o") 'hydra-window/other-window)
   (global-set-key (kbd "C-x <") 'hydra-window/previous-buffer)
   (global-set-key (kbd "C-x >") 'hydra-window/next-buffer)
@@ -507,6 +533,8 @@ _h_   _l_   _o_k        _y_ank
   (global-set-key (kbd "C-x C-=") 'hydra-window/text-scale-increase)
   (global-set-key (kbd "C-x {") 'hydra-window/hydra-move-splitter-left)
   (global-set-key (kbd "C-x }") 'hydra-window/hydra-move-splitter-right)
+
+  (global-set-key (kbd "C-x SPC") 'hydra-rectangle/body)
   )
 
 (use-package ivy-hydra
@@ -754,7 +782,7 @@ _h_   _l_   _o_k        _y_ank
                             :repo "sadboy/symbol-overlay"))
     :init
     (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
-    (setq symbol-overlay-idle-time 0.1)
+    (setq symbol-overlay-idle-time 0.5)
     (setq symbol-overlay-temp-highlight-single t)
     :config
     (setq symbol-overlay-inhibit-map t)
