@@ -307,18 +307,21 @@
 
   (use-package isearch
     :config
-    (defun do-counsel-from-isearch ()
+    (defun do-rg-from-isearch ()
       "Invoke `counsel-rg' from isearch."
       (interactive)
       (let ((query (if isearch-regexp
                        isearch-string
-                     (if (eq isearch-regexp-function)
-                         (funcall isearch-regexp-function isearch-string)
+                     (if (or (eq isearch-regexp-function 'isearch-symbol-regexp)
+                             (eq isearch-regexp-function 'word-search-regexp))
+                         (format "\\b%s\\b" (regexp-quote isearch-string))
                        (regexp-quote isearch-string)))))
         (isearch-exit)
         (counsel-rg query nil "-P")))
-    (define-key isearch-mode-map
-      (kbd "M-o")  'do-counsel-from-isearch))
+    :bind
+    (:map isearch-mode-map
+          ("M-o" do-rg-from-isearch))
+    )
   )
 (use-package counsel-projectile
   :straight t
@@ -330,6 +333,19 @@
   (:map isearch-mode-map
         ("C-o" . swiper-from-isearch))
   :config
+
+  (defun swiper--fix-from-isearch ()
+    "Invoke `swiper' from isearch."
+    (interactive)
+    (let ((query (if isearch-regexp
+                     isearch-string
+                   (if isearch-regexp-function
+                       (funcall isearch-regexp-function isearch-string)
+                     (regexp-quote isearch-string)))))
+      (isearch-exit)
+      (swiper query)))
+  (advice-add 'swiper-from-isearch :override 'swiper--fix-from-isearch)
+
   (global-set-key (kbd "M-s M-o") 'swiper-thing-at-point)
   (use-package multiple-cursors
     :config
