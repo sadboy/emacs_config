@@ -317,10 +317,10 @@
                          (format "\\b%s\\b" (regexp-quote isearch-string))
                        (regexp-quote isearch-string)))))
         (isearch-exit)
-        (counsel-rg query nil "-P")))
+        (counsel-rg query)))
     :bind
     (:map isearch-mode-map
-          ("M-o" do-rg-from-isearch))
+          ("M-o" . do-rg-from-isearch))
     )
   )
 (use-package counsel-projectile
@@ -802,40 +802,40 @@ _h_   _l_   _o_k        _y_ank
     (setq symbol-overlay-temp-highlight-single t)
     :config
     (setq symbol-overlay-inhibit-map t)
-    (defhydra symbol-hydra (global-map "M-s"
-                                       :color pink)
+    (defhydra symbol-hydra (global-map "M-s")
       ("i" symbol-overlay-put)
       ("h" symbol-overlay-map-help)
       ("p" symbol-overlay-jump-prev)
       ("n" symbol-overlay-jump-next)
       ("<" symbol-overlay-jump-first)
       (">" symbol-overlay-jump-last)
-      ("M-w" symbol-overlay-save-symbol)
       ("t" symbol-overlay-toggle-in-scope)
       ("e" symbol-overlay-echo-mark)
       ("M-." symbol-overlay-jump-to-definition)
       ("%" symbol-overlay-query-replace)
-      ("M-r" symbol-overlay-rename)
+      ("C-l" recenter-top-bottom)
+      )
 
+    (defhydra symbol-mc-hydra (global-map "M-s")
       ("M-n" mc/mark-next-like-this-symbol)
       ("M-N" mc/unmark-next-like-this)
       ("M-p" mc/mark-previous-like-this-symbol)
       ("M-P" mc/unmark-previous-like-this)
-
-      ("q" nil nil)
       )
 
     (use-package multiple-cursors
       :config
-      (let ((once-hydras '(symbol-hydra/mc/mark-previous-like-this-symbol
-                           symbol-hydra/mc/unmark-previous-like-this
-                           symbol-hydra/mc/mark-next-like-this-symbol
-                           symbol-hydra/mc/unmark-next-like-this)))
+      (let ((once-hydras '(symbol-mc-hydra/mc/mark-previous-like-this-symbol
+                           symbol-mc-hydra/mc/unmark-previous-like-this
+                           symbol-mc-hydra/mc/mark-next-like-this-symbol
+                           symbol-mc-hydra/mc/unmark-next-like-this)))
         (mapcar
          (lambda (x) (cl-pushnew x mc--default-cmds-to-run-once))
          once-hydras)))
 
     :bind
+    ("M-s M-w" . symbol-overlay-save-symbol)
+    ("M-s M-r" . symbol-overlay-rename)
     ("M-H" . (lambda ()
                (interactive)
                (symbol-overlay-put)
