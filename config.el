@@ -354,7 +354,12 @@
   )
 (use-package ivy-rich
   :straight t
-  :init
+  :ensure t
+  :after (ivy counsel)
+  :config
+  (setq ivy-rich-parse-remote-buffer nil)
+  (setq ivy-rich-parse-remote-file-path nil)
+  (setq ivy-rich-path-style 'full)
   (ivy-rich-mode t))
 
 (use-package company
