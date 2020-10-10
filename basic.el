@@ -146,51 +146,75 @@ mark behind."
 
 ;; {{{ really-toggle-read-only
 
+(defun basic--is-sudo (filename)
+  (and (tramp-tramp-file-p filename)
+       (with-parsed-tramp-file-name filename fn
+         (and (string= "sudo" fn-method)
+              (string= "root" fn-user)
+              fn-localname))))
+
+(defun basic--toggle-buffer-to-name (target)
+  (let ((oldbuf (current-buffer))
+        (currentpoint (point))
+        (bufname (buffer-name))
+        (hasclients (and (boundp 'server-buffer-clients)
+                         server-buffer-clients))
+        (newbuf (find-file-noselect target)))
+    (rename-buffer (concat bufname ".toggle") t)
+    (with-current-buffer newbuf
+      (rename-buffer bufname)
+      (goto-char currentpoint)
+      (and buffer-read-only
+           view-read-only
+           (view-mode t)))
+    (switch-to-buffer newbuf)
+    (recenter)
+    (unless hasclients
+      (kill-buffer oldbuf))
+    (message "Toggled to new filename: %s" target)))
+
 ;;;###autoload
-(defun really-toggle-read-only (&optional arg)
+(defun really-toggle-read-only ()
   "Change whether this buffer is visiting its file read-only by really
 trying to acquire the rights with sudo (and tramp)"
-  (interactive "P")
-  (let*
-      ((currentfilename (buffer-file-name))
-       (currentpoint (point))
-       (newfilename
-        (and currentfilename
-             (not (buffer-modified-p))
-             (cond
-              ((string-match tramp-file-name-regexp currentfilename)
-               (with-parsed-tramp-file-name currentfilename fn
-                 (and (not buffer-read-only)
-                      (string= "sudo" fn-method)
-                      (string= "localhost" fn-host)
-                      fn-localname)))
-              (t
-               (and buffer-read-only
-                    (not (file-writable-p currentfilename))
-                    (make-tramp-file-name :method "sudo"
-                                          :user "root"
-                                          :host "localhost"
-                                          :localname currentfilename)))))))
+  (interactive)
+  (cond
+   ((buffer-modified-p)
+    ;; Buffer has pending changes, so don't do anything special:
+    (call-interactively 'toggle-read-only))
 
-    (if (not newfilename)
-        (call-interactively 'toggle-read-only)
-      (let ((oldbuf (current-buffer))
-            (bufname (buffer-name))
-            (hasclients (if (boundp 'server-buffer-clients)
-                            server-buffer-clients
-                          nil))
-            (newbuf (find-file-noselect newfilename)))
-        (rename-buffer (concat bufname ".toggle") t)
-        (switch-to-buffer newbuf)
-        (rename-buffer bufname)
-        (goto-char currentpoint)
-        (recenter)
-        (and buffer-read-only
-             view-read-only
-             (view-mode t))
-        (unless hasclients
-          (kill-buffer oldbuf))
-        (message "Toggled to new filename: %s" newfilename)))))
+   ((basic--is-sudo (buffer-file-name))
+    ;; We're in a "sudo:root" buffer, so toggle it off:
+    (let ((tramp-name (tramp-dissect-file-name (buffer-file-name))))
+      (basic--toggle-buffer-to-name (tramp-file-name-localname tramp-name))))
+
+   ((file-writable-p (buffer-file-name))
+    ;; We have write permission to this file, so just go through the regular
+    ;; `toggle-read-only':
+    (call-interactively 'toggle-read-only))
+
+   (t
+    ;; Otherwise, we must add a "sudo" hop:
+    (let* ((currentfilename (buffer-file-name))
+           (host (if (tramp-tramp-file-p currentfilename)
+                     (with-parsed-tramp-file-name currentfilename fn
+                       fn-host)
+                   "localhost"))
+           (tramp-name (make-tramp-file-name
+                        :method "sudo"
+                        :user "root"
+                        :host host
+                        :localname currentfilename)))
+      (basic--toggle-buffer-to-name
+       (tramp-make-tramp-file-name
+        (tramp-file-name-method tramp-name)
+        (tramp-file-name-user tramp-name)
+        (tramp-file-name-domain tramp-name)
+        (tramp-file-name-host tramp-name)
+        (tramp-file-name-port tramp-name)
+        (tramp-file-name-localname tramp-name)
+        (tramp-file-name-hop tramp-name)))))))
+
 ;; }}}
 
 
