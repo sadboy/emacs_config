@@ -838,6 +838,31 @@ _h_   _l_   _o_k        _y_ank
          (lambda (x) (cl-pushnew x mc--default-cmds-to-run-once))
          once-hydras)))
 
+    (defvar symbol-overlay-nav-mode-map
+      (let ((map (make-sparse-keymap)))
+        (define-key map "\M-n" 'symbol-overlay-jump-next)
+        (define-key map "\M-p" 'symbol-overlay-jump-prev)
+        map)
+      "Keymap for `symbol-overlay-nav-mode'.")
+
+    (define-minor-mode symbol-overlay-nav-mode
+      "Navigate occurrences of the symbol at point.
+
+When called interactively, toggle `symbol-overlay-nav-mode'.
+With prefix ARG, enable `symbol-overlay-nav-mode' if ARG is
+positive, otherwise disable it.
+
+When called from Lisp, enable `symbol-overlay-nav-mode' if ARG
+is omitted, nil or positive.  If ARG is `toggle', toggle
+`symbol-overlay-nav-mode'.  Otherwise behave as if called
+interactively.
+
+In `symbol-overlay-nav-mode' provide the following key bindings
+to navigate between occurrences of the symbol at point in the
+current buffer.
+
+\\{symbol-overlay-nav-mode-map}")
+
     :bind
     ("M-s M-w" . symbol-overlay-save-symbol)
     ("M-s M-r" . symbol-overlay-rename)
@@ -848,6 +873,8 @@ _h_   _l_   _o_k        _y_ank
     :hook
     (prog-mode . symbol-overlay-mode)
     (text-mode . symbol-overlay-mode)
+    (prog-mode . symbol-overlay-nav-mode)
+    (text-mode . symbol-overlay-nav-mode)
     )
 
 ;; }}}
