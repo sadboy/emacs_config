@@ -359,7 +359,7 @@
   :config
   (setq ivy-rich-parse-remote-buffer nil)
   (setq ivy-rich-parse-remote-file-path nil)
-  (setq ivy-rich-path-style 'full)
+  (setq ivy-rich-path-style 'abbrev)
   (ivy-rich-mode t))
 
 (use-package company
@@ -413,14 +413,10 @@
     ("j" windmove-down)
     ("k" windmove-up)
     ("l" windmove-right)
-    ("H" buf-move-left)
-    ("J" buf-move-down)
-    ("K" buf-move-up)
-    ("L" buf-move-right)
-    ("C-h" hydra-move-splitter-left)
-    ("C-j" hydra-move-splitter-down)
-    ("C-k" hydra-move-splitter-up)
-    ("C-l" hydra-move-splitter-right)
+    ("H" (lambda () (interactive) (let ((buffer-move-stay-after-swap nil)) (buf-move-left))))
+    ("J" (lambda () (interactive) (let ((buffer-move-stay-after-swap nil)) (buf-move-down))))
+    ("K" (lambda () (interactive) (let ((buffer-move-stay-after-swap nil)) (buf-move-up))))
+    ("L" (lambda () (interactive) (let ((buffer-move-stay-after-swap nil)) (buf-move-right))))
     ("{" hydra-move-splitter-left)
     ("_" hydra-move-splitter-down)
     ("^" hydra-move-splitter-up)
@@ -773,7 +769,7 @@ _h_   _l_   _o_k        _y_ank
   (setq lsp-ui-sideline-show-diagnostics t)
   (setq lsp-ui-sideline-update-mode 'line)
 
-  (setq lsp-ui-doc-use-webkit t)
+  (setq lsp-ui-doc-use-webkit nil)
 
   (setq lsp-ui-peek-always-show t)
 
