@@ -554,6 +554,14 @@ _h_   _l_   _o_k        _y_ank
   (global-set-key (kbd "C-x SPC") 'hydra-rectangle/body)
   )
 
+(use-package grep-context
+  :straight t
+  :hook
+  (grep-mode . grep-context-mode))
+
+(use-package wgrep
+  :straight t)
+
 (use-package ivy-hydra
   :straight t)
 
