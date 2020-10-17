@@ -160,6 +160,13 @@
   (:map isearch-mode-map
         ("M-<" . isearch-beginning-of-buffer)
         ("M->" . isearch-end-of-buffer)))
+(use-package grep
+  :bind
+  (:map grep-mode-map
+        ("n" . compilation-next-error)
+        ("p" . compilation-previous-error)
+        ("M-n" . next-error-no-select)
+        ("M-p" . previous-error-no-select)))
 (use-package info
   :bind
   (:map Info-mode-map
@@ -392,7 +399,10 @@
 (use-package buffer-move
   :straight t
   :config
-  (setq buffer-move-stay-after-swap t))
+  (setq buffer-move-stay-after-swap nil))
+
+(use-package rotate
+  :straight t)
 
 (use-package basic
   :after hydra
@@ -413,10 +423,10 @@
     ("j" windmove-down)
     ("k" windmove-up)
     ("l" windmove-right)
-    ("H" (lambda () (interactive) (let ((buffer-move-stay-after-swap nil)) (buf-move-left))))
-    ("J" (lambda () (interactive) (let ((buffer-move-stay-after-swap nil)) (buf-move-down))))
-    ("K" (lambda () (interactive) (let ((buffer-move-stay-after-swap nil)) (buf-move-up))))
-    ("L" (lambda () (interactive) (let ((buffer-move-stay-after-swap nil)) (buf-move-right))))
+    ("H" (buf-move-left))
+    ("J" (buf-move-down))
+    ("K" (buf-move-up))
+    ("L" (buf-move-right))
     ("{" hydra-move-splitter-left)
     ("_" hydra-move-splitter-down)
     ("^" hydra-move-splitter-up)
@@ -429,6 +439,7 @@
     ("C-=" text-scale-increase)
 
     ("o" other-window)
+    ("w" rotate-layout)
 
     ("F" follow-mode)
     ("b" ivy-switch-buffer)
