@@ -566,7 +566,9 @@ _h_   _l_   _o_k        _y_ank
   )
 
 (use-package grep-context
-  :straight t
+  :straight (grep-context
+             :fork (:host github
+                          :repo "sadboy/grep-context"))
   :hook
   (grep-mode . grep-context-mode))
 
