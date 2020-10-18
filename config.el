@@ -813,55 +813,55 @@ _h_   _l_   _o_k        _y_ank
   (python-mode . (lambda () (pyvenv-mode t))))
 
 (use-package symbol-overlay
-    :straight (symbol-overlay
-               :fork (:host github
-                            :repo "sadboy/symbol-overlay"))
-    :init
-    (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
-    (setq symbol-overlay-idle-time 0.5)
-    (setq symbol-overlay-temp-highlight-single t)
+  :straight (symbol-overlay
+             :fork (:host github
+                          :repo "sadboy/symbol-overlay"))
+  :init
+  (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
+  (setq symbol-overlay-idle-time 0.5)
+  (setq symbol-overlay-temp-highlight-single t)
+  :config
+  (setq symbol-overlay-inhibit-map t)
+  (defhydra symbol-hydra (global-map "M-s")
+    ("i" symbol-overlay-put)
+    ("h" symbol-overlay-map-help)
+    ("p" symbol-overlay-jump-prev)
+    ("n" symbol-overlay-jump-next)
+    ("<" symbol-overlay-jump-first)
+    (">" symbol-overlay-jump-last)
+    ("t" symbol-overlay-toggle-in-scope)
+    ("e" symbol-overlay-echo-mark)
+    ("M-." symbol-overlay-jump-to-definition)
+    ("%" symbol-overlay-query-replace)
+    ("C-l" recenter-top-bottom)
+    )
+
+  (defhydra symbol-mc-hydra (global-map "M-s")
+    ("M-n" mc/mark-next-like-this-symbol)
+    ("M-N" mc/unmark-next-like-this)
+    ("M-p" mc/mark-previous-like-this-symbol)
+    ("M-P" mc/unmark-previous-like-this)
+    )
+
+  (use-package multiple-cursors
     :config
-    (setq symbol-overlay-inhibit-map t)
-    (defhydra symbol-hydra (global-map "M-s")
-      ("i" symbol-overlay-put)
-      ("h" symbol-overlay-map-help)
-      ("p" symbol-overlay-jump-prev)
-      ("n" symbol-overlay-jump-next)
-      ("<" symbol-overlay-jump-first)
-      (">" symbol-overlay-jump-last)
-      ("t" symbol-overlay-toggle-in-scope)
-      ("e" symbol-overlay-echo-mark)
-      ("M-." symbol-overlay-jump-to-definition)
-      ("%" symbol-overlay-query-replace)
-      ("C-l" recenter-top-bottom)
-      )
+    (let ((once-hydras '(symbol-mc-hydra/mc/mark-previous-like-this-symbol
+                         symbol-mc-hydra/mc/unmark-previous-like-this
+                         symbol-mc-hydra/mc/mark-next-like-this-symbol
+                         symbol-mc-hydra/mc/unmark-next-like-this)))
+      (mapcar
+       (lambda (x) (cl-pushnew x mc--default-cmds-to-run-once))
+       once-hydras)))
 
-    (defhydra symbol-mc-hydra (global-map "M-s")
-      ("M-n" mc/mark-next-like-this-symbol)
-      ("M-N" mc/unmark-next-like-this)
-      ("M-p" mc/mark-previous-like-this-symbol)
-      ("M-P" mc/unmark-previous-like-this)
-      )
+  (defvar symbol-overlay-nav-mode-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map "\M-n" 'symbol-overlay-jump-next)
+      (define-key map "\M-p" 'symbol-overlay-jump-prev)
+      map)
+    "Keymap for `symbol-overlay-nav-mode'.")
 
-    (use-package multiple-cursors
-      :config
-      (let ((once-hydras '(symbol-mc-hydra/mc/mark-previous-like-this-symbol
-                           symbol-mc-hydra/mc/unmark-previous-like-this
-                           symbol-mc-hydra/mc/mark-next-like-this-symbol
-                           symbol-mc-hydra/mc/unmark-next-like-this)))
-        (mapcar
-         (lambda (x) (cl-pushnew x mc--default-cmds-to-run-once))
-         once-hydras)))
-
-    (defvar symbol-overlay-nav-mode-map
-      (let ((map (make-sparse-keymap)))
-        (define-key map "\M-n" 'symbol-overlay-jump-next)
-        (define-key map "\M-p" 'symbol-overlay-jump-prev)
-        map)
-      "Keymap for `symbol-overlay-nav-mode'.")
-
-    (define-minor-mode symbol-overlay-nav-mode
-      "Navigate occurrences of the symbol at point.
+  (define-minor-mode symbol-overlay-nav-mode
+    "Navigate occurrences of the symbol at point.
 
 When called interactively, toggle `symbol-overlay-nav-mode'.
 With prefix ARG, enable `symbol-overlay-nav-mode' if ARG is
@@ -878,19 +878,19 @@ current buffer.
 
 \\{symbol-overlay-nav-mode-map}")
 
-    :bind
-    ("M-s M-w" . symbol-overlay-save-symbol)
-    ("M-s M-r" . symbol-overlay-rename)
-    ("M-H" . (lambda ()
-               (interactive)
-               (symbol-overlay-put)
-               (symbol-hydra/body)))
-    :hook
-    (prog-mode . symbol-overlay-mode)
-    (text-mode . symbol-overlay-mode)
-    (prog-mode . symbol-overlay-nav-mode)
-    (text-mode . symbol-overlay-nav-mode)
-    )
+  :bind
+  ("M-s M-w" . symbol-overlay-save-symbol)
+  ("M-s M-r" . symbol-overlay-rename)
+  ("M-H" . (lambda ()
+             (interactive)
+             (symbol-overlay-put)
+             (symbol-hydra/body)))
+  :hook
+  (prog-mode . symbol-overlay-mode)
+  (text-mode . symbol-overlay-mode)
+  (prog-mode . symbol-overlay-nav-mode)
+  (text-mode . symbol-overlay-nav-mode)
+  )
 
 ;; }}}
 
