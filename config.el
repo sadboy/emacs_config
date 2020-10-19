@@ -66,7 +66,7 @@
       compilation-scroll-output 'first-error
 
       ;; eldoc-mode
-      eldoc-idle-delay 0.1
+      eldoc-idle-delay 0.2
 
       ;; minimap-mode:
       minimap-window-location 'right
@@ -703,11 +703,15 @@ _h_   _l_   _o_k        _y_ank
 
 (use-package rust-mode
   :straight t)
-
 (use-package cargo
   :straight t
   :hook
   (rust-mode . cargo-minor-mode))
+
+(use-package typescript-mode
+  :straight t
+  :mode
+  ("\\.tsx\\'" . typescript-mode))
 
 (use-package text-mode
   :config
@@ -780,7 +784,7 @@ _h_   _l_   _o_k        _y_ank
                           :repo "sadboy/symbol-overlay"))
   :init
   ;; (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
-  (setq symbol-overlay-idle-time 0.3)
+  (setq symbol-overlay-idle-time 0.2)
   (setq symbol-overlay-temp-highlight-single t)
   :config
   (setq symbol-overlay-inhibit-map t)
