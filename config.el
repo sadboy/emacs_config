@@ -83,6 +83,7 @@
       )
 
 (global-set-key "\C-xQ" 'save-buffers-kill-emacs)
+(global-set-key "\C-z" 'undo)
 
 (when (not (file-exists-p temporary-file-directory))
   (make-directory temporary-file-directory t))
@@ -594,50 +595,6 @@ _h_   _l_   _o_k        _y_ank
 (use-package all-the-icons-ivy :straight t)
 (use-package all-the-icons-gnus :straight t)
 
-(use-package doom-themes
-  ;; :if window-system
-  :straight t
-  :config
-  ;; Global settings (defaults)
-  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
-        doom-themes-enable-italic t) ; if nil, italics is universally disabled
-  (setq doom-one-brighter-comments t
-        doom-one-brighter-modeline nil)
-  (load-theme 'doom-one t)
-
-  ;; Enable flashing mode-line on errors
-  (doom-themes-visual-bell-config)
-
-  ;; Enable custom neotree theme (all-the-icons must be installed!)
-  (doom-themes-neotree-config)
-  ;; or for treemacs users
-  (setq doom-themes-treemacs-theme "doom-colors") ; use the colorful treemacs theme
-  (doom-themes-treemacs-config)
-
-  ;; Corrects (and improves) org-mode's native fontification.
-  (doom-themes-org-config)
-
-  ;; Fixup linum mode
-  (use-package linum
-    :config
-    (set-face-foreground 'linum "dark gray")
-    (set-face-background 'linum "dim gray"))
-  ;; Fixup company popup
-  (use-package company
-    :config
-  ;; (set-face-background 'company-tooltip "dim gray")
-  ;; (set-face-foreground 'company-tooltip "dark gray")
-  ;; (set-face-background 'company-tooltip-selection "light blue")
-    (set-face-background 'company-scrollbar-bg "wheat"))
-  ;; Fix symbol-overlay
-  (use-package symbol-overlay
-    :config
-    (set-face-background 'symbol-overlay-default-face "color-232"))
-
-  ;; Fixup isearch highlighting
-  (set-face-bold 'lazy-highlight nil)
-  )
-
 (use-package projectile
   :straight t
   :bind-keymap
@@ -897,6 +854,54 @@ current buffer.
   (text-mode . symbol-overlay-nav-mode)
   )
 
+;; }}}
+
+;; {{{ Theming
+(use-package doom-themes
+  ;; :if window-system
+  :straight t
+  :config
+  ;; Global settings (defaults)
+  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+        doom-themes-enable-italic t) ; if nil, italics is universally disabled
+  (setq doom-one-brighter-comments t
+        doom-one-brighter-modeline nil)
+  (load-theme 'doom-one t)
+
+  ;; Enable flashing mode-line on errors
+  (doom-themes-visual-bell-config)
+
+  ;; Enable custom neotree theme (all-the-icons must be installed!)
+  (doom-themes-neotree-config)
+  ;; or for treemacs users
+  (setq doom-themes-treemacs-theme "doom-colors") ; use the colorful treemacs theme
+  (doom-themes-treemacs-config)
+
+  ;; Corrects (and improves) org-mode's native fontification.
+  (doom-themes-org-config)
+
+  ;; Fixup linum mode
+  (use-package linum
+    :config
+    (set-face-foreground 'linum "dark gray")
+    (set-face-background 'linum "dim gray"))
+  ;; Fixup company popup
+  (use-package company
+    :config
+  ;; (set-face-background 'company-tooltip "dim gray")
+  ;; (set-face-foreground 'company-tooltip "dark gray")
+  ;; (set-face-background 'company-tooltip-selection "light blue")
+    (set-face-background 'company-scrollbar-bg "wheat"))
+  ;; Fix symbol-overlay
+  (use-package symbol-overlay
+    :config
+    (set-face-attribute 'symbol-overlay-default-face nil
+                        :inherit 'secondary-selection
+                        :background "color-232"))
+
+  ;; Fixup isearch highlighting
+  (set-face-bold 'lazy-highlight nil)
+  )
 ;; }}}
 
 (provide 'config)
