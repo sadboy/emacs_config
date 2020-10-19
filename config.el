@@ -629,6 +629,10 @@ _h_   _l_   _o_k        _y_ank
   ;; (set-face-foreground 'company-tooltip "dark gray")
   ;; (set-face-background 'company-tooltip-selection "light blue")
     (set-face-background 'company-scrollbar-bg "wheat"))
+  ;; Fix symbol-overlay
+  (use-package symbol-overlay
+    :config
+    (set-face-background 'symbol-overlay-default-face "color-232"))
 
   ;; Fixup isearch highlighting
   (set-face-bold 'lazy-highlight nil)
@@ -791,8 +795,7 @@ _h_   _l_   _o_k        _y_ank
   (setq lsp-ui-sideline-update-mode 'line)
 
   (setq lsp-ui-doc-use-webkit nil)
-
-  (setq lsp-ui-peek-always-show t)
+  (setq lsp-ui-peek-always-show nil)
 
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
   (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
@@ -819,8 +822,8 @@ _h_   _l_   _o_k        _y_ank
              :fork (:host github
                           :repo "sadboy/symbol-overlay"))
   :init
-  (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
-  (setq symbol-overlay-idle-time 0.5)
+  ;; (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
+  (setq symbol-overlay-idle-time 0.3)
   (setq symbol-overlay-temp-highlight-single t)
   :config
   (setq symbol-overlay-inhibit-map t)
