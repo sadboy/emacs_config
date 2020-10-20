@@ -102,8 +102,6 @@
 (global-set-key "\C-xaa" 'apropos)
 (global-set-key "\C-xQ" 'save-buffers-kill-emacs)
 (global-set-key "\C-x\C-b" (lambda () (interactive) (ibuffer t nil nil nil t)))
-(global-set-key "\C-x\C-q" 'really-toggle-read-only)
-(global-set-key "\C-xW" 'w3m)
 (global-set-key "\C-xg" 'rgrep)
 (global-set-key (kbd "M-s M-s") 'isearch-forward-symbol-at-point)
 
@@ -564,6 +562,8 @@ _h_   _l_   _o_k        _y_ank
   (global-set-key (kbd "C-x }") 'hydra-window/hydra-move-splitter-right)
 
   (global-set-key (kbd "C-x SPC") 'hydra-rectangle/body)
+
+  (global-set-key "\C-x\C-q" 'really-toggle-read-only)
   )
 
 (use-package grep-context
@@ -572,6 +572,11 @@ _h_   _l_   _o_k        _y_ank
                           :repo "sadboy/grep-context"))
   :hook
   (grep-mode . grep-context-mode))
+
+(use-package w3m
+  :straight t
+  :bind
+  ("C-x W" . w3m))
 
 (use-package wgrep
   :straight t)
@@ -787,6 +792,12 @@ _h_   _l_   _o_k        _y_ank
   (setq symbol-overlay-idle-time 0.2)
   (setq symbol-overlay-temp-highlight-single t)
   :config
+  ;; Fix temp highlighting face:
+  (set-face-attribute 'symbol-overlay-default-face nil
+                      :inherit 'secondary-selection
+                      :background "color-232")
+
+
   (setq symbol-overlay-inhibit-map t)
   (defhydra symbol-hydra (global-map "M-s")
     ("i" symbol-overlay-put)
@@ -870,7 +881,7 @@ current buffer.
         doom-themes-enable-italic t) ; if nil, italics is universally disabled
   (setq doom-one-brighter-comments t
         doom-one-brighter-modeline nil)
-  (load-theme 'doom-one t)
+  ;; (load-theme 'doom-one t)
 
   ;; Enable flashing mode-line on errors
   (doom-themes-visual-bell-config)
@@ -896,12 +907,6 @@ current buffer.
   ;; (set-face-foreground 'company-tooltip "dark gray")
   ;; (set-face-background 'company-tooltip-selection "light blue")
     (set-face-background 'company-scrollbar-bg "wheat"))
-  ;; Fix symbol-overlay
-  (use-package symbol-overlay
-    :config
-    (set-face-attribute 'symbol-overlay-default-face nil
-                        :inherit 'secondary-selection
-                        :background "color-232"))
 
   ;; Fixup isearch highlighting
   (set-face-bold 'lazy-highlight nil)
