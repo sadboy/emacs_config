@@ -755,7 +755,15 @@ _h_   _l_   _o_k        _y_ank
 )
 
 (use-package lsp-ui
-  :straight t
+  :straight (lsp-ui
+             :fork (:host github
+                          :repo "sadboy/lsp-ui"))
+  :bind
+  (:map lsp-ui-peek-mode-map
+        ("<left>" . lsp-ui-peek-scroll-left)
+        ("<right>" . lsp-ui-peek-scroll-right)
+        ("<down" . lsp-ui-peek-scroll-down)
+        ("<up>" . lsp-ui-peek-scroll-up)        )
   :config
   (setq lsp-ui-sideline-show-diagnostics t)
   (setq lsp-ui-sideline-update-mode 'line)
