@@ -73,31 +73,31 @@ Optional arg BUFFER has same meaning as for command `shell'."
     (message "Tab width set to %d (was %d)" arg tab-width)
     (setq tab-width arg)))
 
+
 ;; {{{ highlighting
-(eval-when-compile
-  (require 'hi-lock))
+(defface basic-highlight
+  '((((min-colors 88) (background dark)) (:background "tomato4" :extend t))
+    (t (:background "red" :extend t)))
+  "Face for highlighting region."
+  :group 'basic-hi-lock-faces)
 
+;;;###autoload
+(defun basic-highlight-region (beg end)
+  (let ((ov (make-overlay beg end))
+        (face 'basic-highlight))
+    (overlay-put ov 'face face)
+    (overlay-put ov 'priority -20)
+    (overlay-put ov 'basic-highlight t)))
 
-;; (defvar highlight-faces (list 'hi-gold
-;;                               'hi-purple
-;;                               'hi-pink
-;;                               'hi-green
-;;                               'hi-skyblue
-;;                               'hi-red)
-;;   "List of available faces for highlighting.")
-;; (make-variable-buffer-local 'highlight-faces)
-;; ;;;###autoload
-;; (defun next-highlight-face ()
-;;   (if current-prefix-arg
-;;       (intern (ido-completing-read "Highlight face: "
-;;                                    (mapcar 'symbol-name highlight-faces)
-;;                                    t t))
-;;     (let ((face (car highlight-faces))
-;;           (rest (cdr highlight-faces)))
-;;       (setq highlight-faces (nconc rest (cons face nil)))
-;;       face)))
-;; (eval-after-load "hi-lock"
-;;   '(defalias 'hi-lock-read-face-name 'next-highlight-face))
+(defun basic-unhighlight-region ()
+  (let ((ovs (overlays-at (point)))
+        found)
+    (dolist (ov ovs)
+      (when (overlay-get ov 'basic-highlight)
+        (delete-overlay ov)
+        (setq found t)))
+    found))
+
 ;; }}}
 
 ;;{{{ goto-char & zap-to-char

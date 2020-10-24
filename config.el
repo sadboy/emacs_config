@@ -122,7 +122,7 @@
 ;; (define-key ctrl-x-f-map "l" 'calendar)
 (defvar ctrl-x-comma-map (make-sparse-keymap))
 (define-key ctrl-x-comma-map "c" 'calculator)
-(define-key ctrl-x-comma-map "u" 'customize-option)
+(define-key ctrl-x-comma-map "U" 'customize-option)
 (global-set-key "\C-xi" bo-insert-map)
 (global-set-key "\C-xf" ctrl-x-f-map)
 (global-set-key (kbd "C-x ,") ctrl-x-comma-map)
@@ -158,7 +158,18 @@
   :bind
   (:map isearch-mode-map
         ("M-<" . isearch-beginning-of-buffer)
-        ("M->" . isearch-end-of-buffer)))
+        ("M->" . isearch-end-of-buffer)
+        ("C-h" . isearch-highlight-regexp)))
+(use-package hi-lock
+  :config
+  ;; (setq hi-lock-face-defaults
+  ;;       '("hi-gold" "hi-red" "hi-purple" "hi-skyblue"
+  ;;         "hi-pink" "hi-green" "hi-blue" "hi-black-b"
+  ;;         "hi-blue-b" "hi-red-b" "hi-green-b" "hi-black-hb"))
+  (setq hi-lock-auto-select-face t)
+  :bind
+  (:map ctrl-x-comma-map
+        ("u" . unhighlight-regexp)))
 (use-package grep
   :bind
   (:map grep-mode-map
@@ -763,7 +774,7 @@ _h_   _l_   _o_k        _y_ank
         ("<left>" . lsp-ui-peek-scroll-left)
         ("<right>" . lsp-ui-peek-scroll-right)
         ("<down" . lsp-ui-peek-scroll-down)
-        ("<up>" . lsp-ui-peek-scroll-up)        )
+        ("<up>" . lsp-ui-peek-scroll-up))
   :config
   (setq lsp-ui-sideline-show-diagnostics t)
   (setq lsp-ui-sideline-update-mode 'line)
@@ -803,7 +814,7 @@ _h_   _l_   _o_k        _y_ank
   ;; Fix temp highlighting face:
   (set-face-attribute 'symbol-overlay-default-face nil
                       :inherit 'secondary-selection
-                      :background "color-232")
+                      :background "gray3")
 
 
   (setq symbol-overlay-inhibit-map t)
@@ -863,13 +874,20 @@ current buffer.
 
 \\{symbol-overlay-nav-mode-map}")
 
+  (defun my-highlight-region-or-symbol ()
+    (interactive)
+    (if (use-region-p)
+        (progn
+          (deactivate-mark)
+          (basic-highlight-region (region-beginning) (region-end)))
+      (unless (basic-unhighlight-region)
+        (symbol-overlay-put)
+        (symbol-hydra/body))))
+
   :bind
   ("M-s M-w" . symbol-overlay-save-symbol)
   ("M-s M-r" . symbol-overlay-rename)
-  ("M-H" . (lambda ()
-             (interactive)
-             (symbol-overlay-put)
-             (symbol-hydra/body)))
+  ("M-H" . my-highlight-region-or-symbol)
   :hook
   (prog-mode . symbol-overlay-mode)
   (text-mode . symbol-overlay-mode)
