@@ -112,18 +112,17 @@ key will continue editing from current point position, leaving
 mark behind."
   (interactive "p\ncZap to char: ")
   (let* ((start (point))
-         (overlay (make-overlay start start))
          read
          (reverse nil)
          (str (char-to-string char))
          (inhibit-quit t))
-    (overlay-put overlay 'face 'highlight)
+    (push-mark start)
+    (activate-mark)
     (while
         (progn
           (if reverse
               (search-forward str nil t (- n))
             (search-forward str nil t n))
-          (move-overlay overlay start (point))
           (setq read (read-char (concat "Go to '" str "'")))
           (setq reverse nil)
           (if (eq read 127)             ; <backspace>
@@ -132,15 +131,14 @@ mark behind."
                      (char-equal read char))
                 (eq (key-binding (vector last-input-event))
                     'my-zap-or-goto-char)))))
-    (delete-overlay overlay)
+    (deactivate-mark)
     (cond
      ((eq (key-binding (vector last-input-event))
           'keyboard-quit) ;C-g
+      (pop-mark)
       (goto-char start))
      (t
-      (unless (eq start (point))
-        (push-mark start))
-      (unless (char-equal read 13)      ; <return>
+      (unless (and (characterp read) (char-equal read 13))      ; <return>
         (setq unread-command-events (list last-input-event)))))))
 ;;}}}
 
