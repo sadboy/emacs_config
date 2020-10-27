@@ -99,7 +99,6 @@
 (show-paren-mode t)
 
 ;; {{{ Global key bindings
-(global-set-key "\C-xaa" 'apropos)
 (global-set-key "\C-xQ" 'save-buffers-kill-emacs)
 (global-set-key "\C-x\C-b" (lambda () (interactive) (ibuffer t nil nil nil t)))
 (global-set-key "\C-xg" 'rgrep)
@@ -111,6 +110,7 @@
 (define-key bo-insert-map "a" 'auto-insert)
 (define-key bo-insert-map "i" 'insert-file)
 (define-key bo-insert-map "d" 'bo-add-dir-local-variable)
+
 (defvar ctrl-x-f-map (make-sparse-keymap))
 (define-key ctrl-x-f-map "F" 'ffap)
 (define-key ctrl-x-f-map "c" 'set-fill-column)
@@ -120,9 +120,12 @@
 (define-key ctrl-x-f-map "s" 'magit-status)
 (define-key ctrl-x-f-map "b" 'magit-blame)
 ;; (define-key ctrl-x-f-map "l" 'calendar)
+
 (defvar ctrl-x-comma-map (make-sparse-keymap))
 (define-key ctrl-x-comma-map "c" 'calculator)
 (define-key ctrl-x-comma-map "U" 'customize-option)
+(define-key ctrl-x-comma-map "a" 'apropos)
+
 (global-set-key "\C-xi" bo-insert-map)
 (global-set-key "\C-xf" ctrl-x-f-map)
 (global-set-key (kbd "C-x ,") ctrl-x-comma-map)
@@ -632,7 +635,26 @@ _h_   _l_   _o_k        _y_ank
   (setq org-latex-listings 'minted
         org-special-ctrl-a/e t
         org-special-ctrl-k t
-        org-ctrl-k-protect-subtree t))
+        org-ctrl-k-protect-subtree t)
+  (setq org-hide-emphasis-markers t
+        org-startup-indented t
+        ;; org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
+        org-ellipsis "  " ;; folding symbol
+        org-pretty-entities t
+        org-hide-emphasis-markers t
+        ;; show actually italicized text instead of /italicized text/
+        org-agenda-block-separator ""
+        org-fontify-whole-heading-line t
+        org-fontify-done-headline t
+        org-fontify-quote-and-verse-blocks t)
+  (font-lock-add-keywords 'org-mode
+                          '(("^ +\\([-*]\\) "
+                           (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•")))))))
+
+(use-package org-bullets
+  :straight t
+  :hook
+  (org-mode . org-bullets-mode))
 
 (use-package markdown-mode :straight t)
 
