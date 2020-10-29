@@ -593,7 +593,9 @@ _h_   _l_   _o_k        _y_ank
   ("C-x W" . w3m))
 
 (use-package wgrep
-  :straight t)
+  :straight t
+  :config
+  (setq wgrep-auto-save-buffer t))
 
 (use-package ivy-hydra
   :straight t)
