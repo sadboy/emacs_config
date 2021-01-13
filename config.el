@@ -585,7 +585,8 @@ _h_   _l_   _o_k        _y_ank
              :fork (:host github
                           :repo "sadboy/grep-context"))
   :hook
-  (grep-mode . grep-context-mode))
+  (grep-mode . grep-context-mode)
+  (compilation-mode . grep-context-mode))
 
 (use-package w3m
   :straight t
@@ -710,7 +711,34 @@ _h_   _l_   _o_k        _y_ank
   :bind
   (:map c-mode-map
         ("RET" . c-context-line-break)
-        ("C-c C-c" . compile)))
+        ("C-c C-c" . compile))
+  (:map c++-mode-map
+        ("C-c C-c" . compile))
+
+  :config
+  (defun my-c-common-hook ()
+    (c-set-style "stroustrup")
+    (c-set-offset 'statement-case-open '+)
+    (c-toggle-hungry-state 1)
+    (setq c-basic-offset 4
+          tab-width 8
+          indent-tabs-mode nil
+          indicate-empty-lines t
+          hs-isearch-open nil)
+    (unless (or (file-exists-p "makefile")
+                (file-exists-p "Makefile"))
+      (set (make-local-variable 'compile-command)
+           (concat "make -k "
+                   (if buffer-file-name
+                       (shell-quote-argument
+                        (file-name-sans-extension buffer-file-name)))))))
+
+  (defun my-cpp-hook ()
+    (c-set-style "stroustrup")
+    (subword-mode t))
+
+  (add-hook 'c-mode-common-hook 'my-c-common-hook)
+  (add-hook 'c++-mode-hook 'my-cpp-hook))
 
 (use-package python
   :mode
@@ -787,6 +815,8 @@ _h_   _l_   _o_k        _y_ank
   :hook
   (python-mode . enable-lsp)
   (rust-mode . enable-lsp)
+  (c++-mode . enable-lsp)
+  (c-mode . enable-lsp)
 )
 
 (use-package lsp-ui
