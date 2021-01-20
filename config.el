@@ -620,7 +620,10 @@ _h_   _l_   _o_k        _y_ank
 (use-package projectile
   :straight t
   :bind-keymap
-  ("C-x p" . projectile-command-map))
+  ("C-x p" . projectile-command-map)
+  :bind
+  (:map ctrl-x-f-map
+        ("f" . projectile-find-other-file )))
 
 (use-package treemacs-projectile
   :straight t)
