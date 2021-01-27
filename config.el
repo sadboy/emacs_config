@@ -771,7 +771,8 @@ _h_   _l_   _o_k        _y_ank
 
 (use-package cython-mode
   :straight t)
-
+(use-package cmake-mode
+  :straight t)
 (use-package rust-mode
   :straight t)
 (use-package cargo
