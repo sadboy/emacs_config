@@ -683,6 +683,7 @@ _h_   _l_   _o_k        _y_ank
     (electric-pair-mode t)
     (flyspell-prog-mode)
     (setq fill-column 80)
+    (auto-fill-mode -1)
     (visual-line-mode t)
     (linum-mode t)
     )
@@ -755,7 +756,6 @@ _h_   _l_   _o_k        _y_ank
     (make-local-variable 'company-backends)
     (setq company-backends '(company-capf company-dabbrev-code company-dabbrev))
     (subword-mode t)
-    (auto-fill-mode nil)
     )
   (add-hook 'python-mode-hook 'my-python-mode-hook)
 
