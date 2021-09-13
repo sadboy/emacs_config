@@ -785,6 +785,11 @@ _h_   _l_   _o_k        _y_ank
   :mode
   ("\\.tsx\\'" . typescript-mode))
 
+(use-package thrift-mode
+  :straight t
+  :mode
+  ("\\.thrift\\'" . thrift-mode))
+
 (use-package text-mode
   :config
   (defun my-text-mode-hook ()
@@ -846,6 +851,12 @@ _h_   _l_   _o_k        _y_ank
 
 (use-package dap-mode
   :straight t)
+
+(use-package dash-docs
+  :straight t
+  :config
+  (setq dash-docs-common-docsets '("Python 3"))
+  )
 
 (use-package lsp-python-ms
   :straight t
