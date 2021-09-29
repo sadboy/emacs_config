@@ -779,6 +779,8 @@ _h_   _l_   _o_k        _y_ank
   :straight t
   :hook
   (rust-mode . cargo-minor-mode))
+(use-package toml-mode
+  :straight t)
 
 (use-package typescript-mode
   :straight t
@@ -820,6 +822,8 @@ _h_   _l_   _o_k        _y_ank
   (defun enable-lsp ()
     (lsp)
     (lsp-completion-mode t))
+
+  (setq lsp-rust-server 'rls)
 
   :hook
   (python-mode . enable-lsp)
