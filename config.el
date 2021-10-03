@@ -112,7 +112,7 @@
 (define-key bo-insert-map "d" 'bo-add-dir-local-variable)
 
 (defvar ctrl-x-f-map (make-sparse-keymap))
-(define-key ctrl-x-f-map "F" 'ffap)
+(define-key ctrl-x-f-map "f" 'ffap)
 (define-key ctrl-x-f-map "c" 'set-fill-column)
 (define-key ctrl-x-f-map "t" 'set-tab-width)
 (define-key ctrl-x-f-map "h" 'hexl-mode)
@@ -148,8 +148,8 @@
 
 ;; {{{ Builtin packages:
 (use-package ffap
-  :init
-  (ffap-bindings)
+  ;; :init
+  ;; (ffap-bindings)
   :bind
   (:map ctrl-x-f-map
         ("l" . find-file-literally-at-point)))
@@ -623,7 +623,7 @@ _h_   _l_   _o_k        _y_ank
   ("C-x p" . projectile-command-map)
   :bind
   (:map ctrl-x-f-map
-        ("f" . projectile-find-other-file )))
+        ("o" . projectile-find-other-file )))
 
 (use-package treemacs-projectile
   :straight t)
