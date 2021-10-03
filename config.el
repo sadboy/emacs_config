@@ -852,6 +852,11 @@ _h_   _l_   _o_k        _y_ank
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
   (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
   )
+(use-package lsp-ivy
+  :straight t
+  :bind
+  ("C-c o" . lsp-ivy-workspace-symbol)
+  ("C-c O" . lsp-ivy-global-workspace-symbol))
 
 (use-package dap-mode
   :straight t)
