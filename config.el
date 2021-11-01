@@ -729,13 +729,18 @@ _h_   _l_   _o_k        _y_ank
           indent-tabs-mode nil
           indicate-empty-lines t
           hs-isearch-open nil)
-    (unless (or (file-exists-p "makefile")
-                (file-exists-p "Makefile"))
+
+    (let ((output-name (if buffer-file-name
+                           (shell-quote-argument
+                            (file-name-base buffer-file-name))
+                         (buffer-name)))
+          (input-name (if buffer-file-name
+                          (file-name-nondirectory buffer-file-name)
+                        (buffer-name))))
       (set (make-local-variable 'compile-command)
            (concat "make -k "
-                   (if buffer-file-name
-                       (shell-quote-argument
-                        (file-name-sans-extension buffer-file-name)))))))
+                   output-name
+                   " && ./" output-name))))
 
   (defun my-cpp-hook ()
     (c-set-style "stroustrup")
