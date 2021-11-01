@@ -1,4 +1,6 @@
 (eval-when-compile
+  (straight-use-package 'use-package)
+  (straight-use-package 'hydra)
   (require 'cl-lib)
   (require 'use-package)
   (require 'hydra))
