@@ -284,8 +284,8 @@
   :straight t
   :bind
   ("C-S-<mouse-1>" . mc/add-cursor-on-click)
-  ("M-N" . mc/mark-next-like-this)
-  ("M-P" . mc/mark-previous-like-this)
+  ;; ("M-N" . mc/mark-next-like-this)
+  ;; ("M-P" . mc/mark-previous-like-this)
   :config
   ;; (setq mc/list-file "~/.emacs.d/mc.list.el")
   ;; mc/always-run-for-all t
@@ -677,6 +677,10 @@ _h_   _l_   _o_k        _y_ank
 
 ;; {{{ modes
 (use-package prog-mode
+  :bind
+  (:map prog-mode-map
+        ("M-N" . flymake-goto-next-error)
+        ("M-P" . flymake-goto-prev-error))
   :config
   (defun my-prog-mode-hook ()
     ;; (outline-minor-mode t)
@@ -857,7 +861,8 @@ _h_   _l_   _o_k        _y_ank
   (setq lsp-ui-peek-always-show nil)
 
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
-  (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
+  (define-key lsp-ui-mode-map (kbd "M-R") #'lsp-ui-peek-find-references)
+  (define-key lsp-ui-mode-map (kbd "M-?") #'lsp-ui-doc-focus-frame)
   )
 (use-package lsp-ivy
   :straight t
