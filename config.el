@@ -887,7 +887,10 @@ _h_   _l_   _o_k        _y_ank
   :straight t
   :config
   (require 'lsp-python-ms)
-)
+  )
+
+(use-package lsp-pyright
+  :straight t)
 
 (use-package pyvenv
   :straight t
