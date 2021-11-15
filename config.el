@@ -837,10 +837,11 @@ _h_   _l_   _o_k        _y_ank
   (setq lsp-rust-server 'rls)
 
   :hook
-  (python-mode . enable-lsp)
-  (rust-mode . enable-lsp)
-  (c++-mode . enable-lsp)
-  (c-mode . enable-lsp)
+  (python-mode . lsp-deferred)
+  (c++-mode . lsp-deferred)
+  (c-mode . lsp-deferred)
+
+  :commands (lsp lsp-deferred)
 )
 
 (use-package lsp-ui
@@ -860,9 +861,12 @@ _h_   _l_   _o_k        _y_ank
   (setq lsp-ui-doc-use-webkit nil)
   (setq lsp-ui-peek-always-show nil)
 
+  (setq lsp-ui-imenu-auto-refresh t)
+
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
   (define-key lsp-ui-mode-map (kbd "M-R") #'lsp-ui-peek-find-references)
   (define-key lsp-ui-mode-map (kbd "M-?") #'lsp-ui-doc-focus-frame)
+  (define-key lsp-ui-mode-map (kbd "M-I") #'lsp-ui-imenu)
   )
 (use-package lsp-ivy
   :straight t
