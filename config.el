@@ -784,12 +784,14 @@ _h_   _l_   _o_k        _y_ank
   :straight t)
 (use-package cmake-mode
   :straight t)
-(use-package rust-mode
+;; (use-package rust-mode
+;;   :straight t)
+;; (use-package cargo
+;;   :straight t
+;;   :hook
+;;   (rust-mode . cargo-minor-mode))
+(use-package rustic
   :straight t)
-(use-package cargo
-  :straight t
-  :hook
-  (rust-mode . cargo-minor-mode))
 (use-package toml-mode
   :straight t)
 
@@ -834,7 +836,7 @@ _h_   _l_   _o_k        _y_ank
     (lsp)
     (lsp-completion-mode t))
 
-  (setq lsp-rust-server 'rls)
+  (setq lsp-rust-analyzer-cargo-watch-command "clippy")
 
   :hook
   (python-mode . lsp-deferred)
