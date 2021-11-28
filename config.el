@@ -1,6 +1,7 @@
 (eval-when-compile
   (straight-use-package 'use-package)
   (straight-use-package 'hydra)
+  (straight-use-package 'project)
   (require 'cl-lib)
   (require 'use-package)
   (require 'hydra))
@@ -618,6 +619,9 @@ _h_   _l_   _o_k        _y_ank
 (use-package all-the-icons :straight t)
 (use-package all-the-icons-ivy :straight t)
 (use-package all-the-icons-gnus :straight t)
+
+(use-package project
+  :straight t)
 
 (use-package projectile
   :straight t
