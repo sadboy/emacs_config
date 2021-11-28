@@ -784,6 +784,8 @@ _h_   _l_   _o_k        _y_ank
   :mode
   ("\\.g4\\'" . antlr-mode))
 
+(use-package ahk-mode
+  :straight t)
 (use-package cython-mode
   :straight t)
 (use-package cmake-mode
