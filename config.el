@@ -898,6 +898,19 @@ _h_   _l_   _o_k        _y_ank
 (use-package lsp-pyright
   :straight t)
 
+(use-package tree-sitter
+  :straight t
+)
+(use-package tree-sitter-langs
+  :straight t
+  :config
+  (add-hook 'python-mode-hook #'tree-sitter-hl-mode)
+  (add-hook 'rust-mode-hook #'tree-sitter-hl-mode)
+  (add-hook 'c-mode-common-hook #'tree-sitter-hl-mode)
+  (add-hook 'java-mode-hook #'tree-sitter-hl-mode)
+  (add-hook 'shell-mode-hook #'tree-sitter-hl-mode)
+  )
+
 (use-package pyvenv
   :straight t
   :init
