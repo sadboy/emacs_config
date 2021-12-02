@@ -59,7 +59,7 @@
       window-min-height 10
       same-window-regexps '("magit:.*")
 
-      abbrev-file-name "~/emacs/abbrev_defs"
+      ;; abbrev-file-name "~/emacs/abbrev_defs"
       save-abbrevs t
 
       ispell-process-directory (expand-file-name "~/")
@@ -679,155 +679,6 @@ _h_   _l_   _o_k        _y_ank
 ;;   :straight t
 ;;   :bind ("C-." . ace-jump-mode))
 
-;; {{{ modes
-(use-package prog-mode
-  :bind
-  (:map prog-mode-map
-        ("M-N" . flymake-goto-next-error)
-        ("M-P" . flymake-goto-prev-error))
-  :config
-  (defun my-prog-mode-hook ()
-    ;; (outline-minor-mode t)
-    (hs-minor-mode t)
-    (whitespace-mode t)
-    (electric-pair-mode t)
-    (flyspell-prog-mode)
-    (setq fill-column 80)
-    (auto-fill-mode -1)
-    (visual-line-mode t)
-    (linum-mode t)
-    )
-  (add-hook 'prog-mode-hook 'my-prog-mode-hook)
-  )
-
-(use-package elisp-mode
-  :bind
-  (:map emacs-lisp-mode-map
-        ("C-c C-b" . eval-current-buffer)
-        ("C-c C-c" . emacs-lisp-byte-compile)
-        ("C-c C-l" . emacs-lisp-byte-compile-and-load)
-        ("C-c C-r" . eval-region)
-        )
-  :config
-  ;; (setq lisp-indent-function 'common-lisp-indent-function)
-  (defun my-emacs-lisp-mode-hook ()
-    (make-local-variable 'company-backends)
-    (setq company-backends
-          '(company-capf company-files company-dabbrev-code company-dabbrev))
-    (make-local-variable 'parens-require-spaces)
-    (local-set-key "\C-xiu" (lambda () (interactive) (insert ";;;###autoload")))
-    (setq parens-require-spaces t
-          tab-width 8))
-  (add-hook 'emacs-lisp-mode-hook 'my-emacs-lisp-mode-hook)
-  )
-
-(use-package cc-mode
-  :bind
-  (:map c-mode-map
-        ("RET" . c-context-line-break)
-        ("C-c C-c" . compile))
-  (:map c++-mode-map
-        ("C-c C-c" . compile))
-
-  :config
-  (defun my-c-common-hook ()
-    (c-set-style "stroustrup")
-    (c-set-offset 'statement-case-open '+)
-    (c-toggle-hungry-state 1)
-    (setq c-basic-offset 4
-          tab-width 8
-          indent-tabs-mode nil
-          indicate-empty-lines t
-          hs-isearch-open nil)
-
-    (let ((output-name (if buffer-file-name
-                           (shell-quote-argument
-                            (file-name-base buffer-file-name))
-                         (buffer-name)))
-          (input-name (if buffer-file-name
-                          (file-name-nondirectory buffer-file-name)
-                        (buffer-name))))
-      (set (make-local-variable 'compile-command)
-           (concat "make -k "
-                   output-name
-                   " && ./" output-name))))
-
-  (defun my-cpp-hook ()
-    (c-set-style "stroustrup")
-    (subword-mode t))
-
-  (add-hook 'c-mode-common-hook 'my-c-common-hook)
-  (add-hook 'c++-mode-hook 'my-cpp-hook))
-
-(use-package python
-  :mode
-  ("/TARGETS\\'" . python-mode)
-  :config
-  (setq python-indent-offset 4)
-
-  (defun my-python-mode-hook ()
-    (setq python-skeleton-autoinsert nil)
-    (kill-local-variable 'completion-at-point-functions)
-    (make-local-variable 'company-backends)
-    (setq company-backends '(company-capf company-dabbrev-code company-dabbrev))
-    (subword-mode t)
-    )
-  (add-hook 'python-mode-hook 'my-python-mode-hook)
-
-  (defhydra hydra-python (python-mode-map "C-c")
-    "Shift indentation"
-    ("<" python-indent-shift-left)
-    (">" python-indent-shift-right))
-  )
-
-(use-package antlr-mode
-  :mode
-  ("\\.g4\\'" . antlr-mode))
-
-(use-package ahk-mode
-  :straight t)
-(use-package cython-mode
-  :straight t)
-(use-package cmake-mode
-  :straight t)
-;; (use-package rust-mode
-;;   :straight t)
-;; (use-package cargo
-;;   :straight t
-;;   :hook
-;;   (rust-mode . cargo-minor-mode))
-(use-package rustic
-  :straight t)
-(use-package toml-mode
-  :straight t)
-
-(use-package typescript-mode
-  :straight t
-  :mode
-  ("\\.tsx\\'" . typescript-mode))
-
-(use-package thrift-mode
-  :straight t
-  :mode
-  ("\\.thrift\\'" . thrift-mode))
-
-(use-package text-mode
-  :config
-  (defun my-text-mode-hook ()
-    (auto-fill-mode 1)
-    (flyspell-mode 1)
-    (setq require-final-newline nil)
-    (modify-syntax-entry ?' ".")
-    (make-local-variable 'company-backends)
-    (setq company-backends
-          (if (fboundp 'company-math-symbols-unicode)
-              '(company-dabbrev-code company-dabbrev
-                                     company-math-symbols-unicode)
-            '(company-dabbrev-code company-dabbrev))))
-  (add-hook 'text-mode-hook 'my-text-mode-hook)
-)
-;; }}}
-
 ;; {{{ code utils
 (use-package lsp-mode
   :straight t
@@ -1013,6 +864,161 @@ current buffer.
   (text-mode . symbol-overlay-nav-mode)
   )
 
+;; }}}
+
+;; {{{ modes
+(use-package prog-mode
+  :bind
+  (:map prog-mode-map
+        ("M-N" . flymake-goto-next-error)
+        ("M-P" . flymake-goto-prev-error))
+  :config
+  (defun my-prog-mode-hook ()
+    ;; (outline-minor-mode t)
+    (hs-minor-mode t)
+    (whitespace-mode t)
+    (electric-pair-mode t)
+    (flyspell-prog-mode)
+    (setq fill-column 80)
+    (auto-fill-mode -1)
+    (visual-line-mode t)
+    (linum-mode t)
+    )
+  (add-hook 'prog-mode-hook 'my-prog-mode-hook)
+  )
+
+(use-package elisp-mode
+  :bind
+  (:map emacs-lisp-mode-map
+        ("C-c C-b" . eval-current-buffer)
+        ("C-c C-c" . emacs-lisp-byte-compile)
+        ("C-c C-l" . emacs-lisp-byte-compile-and-load)
+        ("C-c C-r" . eval-region)
+        )
+  :config
+  ;; (setq lisp-indent-function 'common-lisp-indent-function)
+  (defun my-emacs-lisp-mode-hook ()
+    (make-local-variable 'company-backends)
+    (setq company-backends
+          '(company-capf company-files company-dabbrev-code company-dabbrev))
+    (make-local-variable 'parens-require-spaces)
+    (local-set-key "\C-xiu" (lambda () (interactive) (insert ";;;###autoload")))
+    (setq parens-require-spaces t
+          tab-width 8))
+  (add-hook 'emacs-lisp-mode-hook 'my-emacs-lisp-mode-hook)
+  )
+
+(use-package cc-mode
+  :bind
+  (:map c-mode-map
+        ("RET" . c-context-line-break)
+        ("C-c C-c" . compile))
+  (:map c++-mode-map
+        ("C-c C-c" . compile))
+
+  :config
+  (defun my-c-common-hook ()
+    (c-set-style "stroustrup")
+    (c-set-offset 'statement-case-open '+)
+    (c-toggle-hungry-state 1)
+    (setq c-basic-offset 4
+          tab-width 8
+          indent-tabs-mode nil
+          indicate-empty-lines t
+          hs-isearch-open nil)
+
+    (let ((output-name (if buffer-file-name
+                           (shell-quote-argument
+                            (file-name-base buffer-file-name))
+                         (buffer-name)))
+          (input-name (if buffer-file-name
+                          (file-name-nondirectory buffer-file-name)
+                        (buffer-name))))
+      (set (make-local-variable 'compile-command)
+           (concat "make -k "
+                   output-name
+                   " && ./" output-name))))
+
+  (defun my-cpp-hook ()
+    (c-set-style "stroustrup")
+    (subword-mode t))
+
+  (add-hook 'c-mode-common-hook 'my-c-common-hook)
+  (add-hook 'c++-mode-hook 'my-cpp-hook))
+
+(use-package python
+  :mode
+  ("/TARGETS\\'" . python-mode)
+  :config
+  (setq python-indent-offset 4)
+
+  (defun my-python-mode-hook ()
+    (setq python-skeleton-autoinsert nil)
+    (kill-local-variable 'completion-at-point-functions)
+    (make-local-variable 'company-backends)
+    (setq company-backends '(company-capf company-dabbrev-code company-dabbrev))
+    (subword-mode t)
+    )
+  (add-hook 'python-mode-hook 'my-python-mode-hook)
+
+  (defhydra hydra-python (python-mode-map "C-c")
+    "Shift indentation"
+    ("<" python-indent-shift-left)
+    (">" python-indent-shift-right))
+  )
+
+(use-package antlr-mode
+  :mode
+  ("\\.g4\\'" . antlr-mode))
+
+(use-package ahk-mode
+  :straight t
+  :config
+  (add-hook 'ahk-mode-hook
+            (lambda ()
+              (when (fboundp 'symbol-overlay-mode)
+                (symbol-overlay-mode 1)
+                (symbol-overlay-nav-mode 1)))))
+(use-package cython-mode
+  :straight t)
+(use-package cmake-mode
+  :straight t)
+;; (use-package rust-mode
+;;   :straight t)
+;; (use-package cargo
+;;   :straight t
+;;   :hook
+;;   (rust-mode . cargo-minor-mode))
+(use-package rustic
+  :straight t)
+(use-package toml-mode
+  :straight t)
+
+(use-package typescript-mode
+  :straight t
+  :mode
+  ("\\.tsx\\'" . typescript-mode))
+
+(use-package thrift-mode
+  :straight t
+  :mode
+  ("\\.thrift\\'" . thrift-mode))
+
+(use-package text-mode
+  :config
+  (defun my-text-mode-hook ()
+    (auto-fill-mode 1)
+    (flyspell-mode 1)
+    (setq require-final-newline nil)
+    (modify-syntax-entry ?' ".")
+    (make-local-variable 'company-backends)
+    (setq company-backends
+          (if (fboundp 'company-math-symbols-unicode)
+              '(company-dabbrev-code company-dabbrev
+                                     company-math-symbols-unicode)
+            '(company-dabbrev-code company-dabbrev))))
+  (add-hook 'text-mode-hook 'my-text-mode-hook)
+)
 ;; }}}
 
 ;; {{{ Theming
