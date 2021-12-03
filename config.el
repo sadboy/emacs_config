@@ -61,6 +61,7 @@
 
       ;; abbrev-file-name "~/emacs/abbrev_defs"
       save-abbrevs t
+      vc-follow-symlinks t
 
       ispell-process-directory (expand-file-name "~/")
       flyspell-issue-message-flag nil
