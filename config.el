@@ -868,25 +868,26 @@ current buffer.
 ;; }}}
 
 ;; {{{ modes
+(defun my-prog-mode-hook ()
+  ;; (outline-minor-mode t)
+  (hs-minor-mode t)
+  (whitespace-mode t)
+  (electric-pair-mode t)
+  (flyspell-prog-mode)
+  (setq fill-column 80)
+  (auto-fill-mode -1)
+  (visual-line-mode t)
+  (linum-mode t)
+  )
+
 (use-package prog-mode
   :bind
   (:map prog-mode-map
         ("M-N" . flymake-goto-next-error)
         ("M-P" . flymake-goto-prev-error))
   :config
-  (defun my-prog-mode-hook ()
-    ;; (outline-minor-mode t)
-    (hs-minor-mode t)
-    (whitespace-mode t)
-    (electric-pair-mode t)
-    (flyspell-prog-mode)
-    (setq fill-column 80)
-    (auto-fill-mode -1)
-    (visual-line-mode t)
-    (linum-mode t)
-    )
   (add-hook 'prog-mode-hook 'my-prog-mode-hook)
-  )
+)
 
 (use-package elisp-mode
   :bind
@@ -977,6 +978,7 @@ current buffer.
   :config
   (add-hook 'ahk-mode-hook
             (lambda ()
+              (my-prog-mode-hook)
               (when (fboundp 'symbol-overlay-mode)
                 (symbol-overlay-mode 1)
                 (symbol-overlay-nav-mode 1)))))
