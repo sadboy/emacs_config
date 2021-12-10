@@ -17,10 +17,12 @@
 (setq display-buffer-base-action
       '((display-buffer--maybe-same-window
          display-buffer-reuse-window
-         display-buffer--maybe-pop-up-frame-or-window
          display-buffer-use-some-window
+         display-buffer--maybe-pop-up-frame-or-window
          display-buffer-pop-up-window)
         . ((reusable-frames . visible)))
+
+      ;; same-window-regexps '("magit:.*")
       )
 (setq package-enable-at-startup nil
       ;; Don't change default temp directory on Mac:
@@ -57,7 +59,6 @@
       tramp-default-method "sshx"
 
       window-min-height 10
-      same-window-regexps '("magit:.*")
 
       ;; abbrev-file-name "~/emacs/abbrev_defs"
       save-abbrevs t
