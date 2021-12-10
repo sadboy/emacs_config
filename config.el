@@ -271,7 +271,8 @@
 (use-package wdired
   :bind
   (:map dired-mode-map
-        ("C-x C-q" . wdired-change-to-wdired-mode)))
+        ("C-x C-q" . wdired-change-to-wdired-mode))
+  :commands (wdired-change-to-wdired-mode))
 (use-package winner
   :demand t
   :config
@@ -281,6 +282,13 @@
 ;; }}}
 
 (use-package flx :straight t)
+(use-package dired-narrow
+  :straight t
+  :bind
+  (:map dired-mode-map
+        ("C-x N" . dired-narrow))
+  :hook
+  (dired-mode . dired-narrow-mode))
 
 (use-package multiple-cursors
   :straight t
