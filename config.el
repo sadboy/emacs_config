@@ -125,6 +125,7 @@
 (define-key ctrl-x-f-map "s" 'magit-status)
 (define-key ctrl-x-f-map "b" 'magit-blame)
 ;; (define-key ctrl-x-f-map "l" 'calendar)
+(global-set-key (kbd "C-S-s") 'magit-status)
 
 (defvar ctrl-x-comma-map (make-sparse-keymap))
 (define-key ctrl-x-comma-map "c" 'calculator)
@@ -134,6 +135,7 @@
 (global-set-key "\C-xi" bo-insert-map)
 (global-set-key "\C-xf" ctrl-x-f-map)
 (global-set-key (kbd "C-x ,") ctrl-x-comma-map)
+(global-set-key (kbd "C-S-r") 'revert-buffer)
 
 (global-set-key "\M-z" 'my-zap-or-goto-char)
 
@@ -147,6 +149,7 @@
 (global-set-key (kbd "C-M-<") 'other-window-history-back)
 (global-set-key (kbd "C-M->") 'other-window-history-forward)
 ;; For terminal:
+(global-set-key (kbd "<f6>") 'revert-buffer)
 (global-set-key (kbd "<f7>") 'previous-buffer)
 (global-set-key (kbd "<f8>") 'next-buffer)
 ;; }}}
@@ -287,7 +290,9 @@
   :straight t
   :bind
   (:map dired-mode-map
-        ("C-x N" . dired-narrow))
+        ("C-x N" . dired-narrow)
+        ("F" . dired-narrow)
+        ("N" . dired-narrow))
   :hook
   (dired-mode . dired-narrow-mode))
 
@@ -457,6 +462,10 @@
     ("_" hydra-move-splitter-down)
     ("^" hydra-move-splitter-up)
     ("}" hydra-move-splitter-right)
+    ("<left>" hydra-move-splitter-left)
+    ("<down>" hydra-move-splitter-down)
+    ("<up>" hydra-move-splitter-up)
+    ("<right>" hydra-move-splitter-right)
     ("-" shrink-window-if-larger-than-buffer)
     ("=" balance-windows)
     ("[" (lambda () (interactive) (scroll-left 8)))
@@ -576,6 +585,7 @@ _h_   _l_   _o_k        _y_ank
   (global-set-key (kbd "M-<f12>") 'hydra-move-splitter-right)
 
   (global-set-key (kbd "C-x w") 'hydra-window/body)
+  (global-set-key (kbd "C-S-w") 'hydra-window/body)
   (global-set-key (kbd "C-x 1") 'hydra-window/delete-other-windows)
   (global-set-key (kbd "C-x 2") 'hydra-window/split-window-below)
   (global-set-key (kbd "C-x 3") 'hydra-window/split-window-right)
