@@ -430,7 +430,8 @@
 (use-package buffer-move
   :straight t
   :config
-  (setq buffer-move-stay-after-swap nil))
+  (setq buffer-move-stay-after-swap nil
+        buffer-move-behavior 'move))
 
 (use-package rotate
   :straight t)
