@@ -86,6 +86,7 @@
       ;; tls verify:
       tls-checktrust t
       )
+(add-hook 'comint-output-filter-functions 'comint-truncate-buffer)
 
 (global-set-key "\C-xQ" 'save-buffers-kill-emacs)
 (global-set-key "\C-z" 'undo)
