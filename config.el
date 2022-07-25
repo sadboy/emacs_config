@@ -964,7 +964,6 @@ current buffer.
                    " && ./" output-name))))
 
   (defun my-cpp-hook ()
-    (c-set-style "stroustrup")
     (subword-mode t))
 
   (add-hook 'c-mode-common-hook 'my-c-common-hook)
