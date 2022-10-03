@@ -948,6 +948,7 @@ current buffer.
           indent-tabs-mode nil
           indicate-empty-lines t
           hs-isearch-open nil)
+    (setq company-backends '(company-capf company-dabbrev-code company-dabbrev))
 
     (let ((output-name (if buffer-file-name
                            (shell-quote-argument
@@ -962,7 +963,6 @@ current buffer.
                    " && ./" output-name))))
 
   (defun my-cpp-hook ()
-    (c-set-style "stroustrup")
     (subword-mode t))
 
   (add-hook 'c-mode-common-hook 'my-c-common-hook)
@@ -1016,6 +1016,10 @@ current buffer.
   :straight t)
 (use-package toml-mode
   :straight t)
+(use-package hack-mode
+  :straight t
+  :config
+  (add-hook 'hack-mode-hook 'lsp))
 
 (use-package typescript-mode
   :straight t
