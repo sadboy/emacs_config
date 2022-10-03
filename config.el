@@ -31,7 +31,6 @@
       sentence-end-without-space "。，？！；……"
       sentence-end-double-space nil
       default-input-method "TeX"
-      gnus-init-file "~/emacs/lisp/basic/gnus-settings"
 
       view-read-only t                  ; Open read-only files in view mode
       visible-bell nil
