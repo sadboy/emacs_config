@@ -307,6 +307,14 @@
   ;; mc/always-run-for-all t
   )
 
+(use-package avy
+  :straight t
+  :bind
+  ("C-'" . avy-goto-char)
+  ("C-\"" . avy-goto-line)
+  (:map isearch-mode-map
+        ("C-'" . avy-isearch)))
+
 (use-package ivy
   :straight t
   :init
