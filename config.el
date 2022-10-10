@@ -311,6 +311,7 @@
   :straight t
   :bind
   ("C-'" . avy-goto-char)
+  ("M-z" . avy-goto-char-2)
   ("C-\"" . avy-goto-line)
   (:map isearch-mode-map
         ("C-'" . avy-isearch)))
