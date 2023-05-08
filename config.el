@@ -1055,6 +1055,9 @@ current buffer.
             '(company-dabbrev-code company-dabbrev))))
   (add-hook 'text-mode-hook 'my-text-mode-hook)
 )
+
+(use-package yaml-mode
+  :straight t)
 ;; }}}
 
 ;; {{{ Theming
