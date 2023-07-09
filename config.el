@@ -698,7 +698,10 @@ _h_   _l_   _o_k        _y_ank
   :hook
   (org-mode . org-bullets-mode))
 
-(use-package markdown-mode :straight t)
+(use-package markdown-mode
+  :straight t
+  :mode
+  ("\\.mdx\\'". markdown-mode))
 
 (use-package which-key
   :straight t
