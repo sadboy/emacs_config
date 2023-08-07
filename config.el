@@ -131,6 +131,7 @@
 (define-key ctrl-x-comma-map "c" 'calculator)
 (define-key ctrl-x-comma-map "U" 'customize-option)
 (define-key ctrl-x-comma-map "a" 'apropos)
+(define-key ctrl-x-comma-map "l" 'display-line-numbers-mode)
 
 (global-set-key "\C-xi" bo-insert-map)
 (global-set-key "\C-xf" ctrl-x-f-map)
@@ -208,10 +209,6 @@
 (use-package uniquify
   :config
   (setq uniquify-buffer-name-style 'post-forward-angle-brackets))
-(use-package linum
-  :bind
-  (:map ctrl-x-comma-map
-        ("l" . linum-mode)))
 (use-package ediff
   :init
   (defvar my-ediff-map (make-sparse-keymap))
@@ -909,7 +906,7 @@ current buffer.
   (setq fill-column 80)
   (auto-fill-mode -1)
   (visual-line-mode t)
-  (linum-mode t)
+  (display-line-numbers-mode t)
   )
 
 (use-package prog-mode
@@ -1087,11 +1084,6 @@ current buffer.
   ;; Corrects (and improves) org-mode's native fontification.
   (doom-themes-org-config)
 
-  ;; Fixup linum mode
-  (use-package linum
-    :config
-    (set-face-foreground 'linum "dark gray")
-    (set-face-background 'linum "dim gray"))
   ;; Fixup company popup
   (use-package company
     :config
