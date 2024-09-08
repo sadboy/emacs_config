@@ -179,7 +179,7 @@ trying to acquire the rights with sudo (and tramp)"
   (cond
    ((buffer-modified-p)
     ;; Buffer has pending changes, so don't do anything special:
-    (call-interactively 'toggle-read-only))
+    (call-interactively 'read-only-mode))
 
    ((basic--is-sudo (buffer-file-name))
     ;; We're in a "sudo:root" buffer, so toggle it off:
@@ -189,7 +189,7 @@ trying to acquire the rights with sudo (and tramp)"
    ((file-writable-p (buffer-file-name))
     ;; We have write permission to this file, so just go through the regular
     ;; `toggle-read-only':
-    (call-interactively 'toggle-read-only))
+    (call-interactively 'read-only-mode))
 
    (t
     ;; Otherwise, we must add a "sudo" hop:
