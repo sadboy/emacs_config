@@ -766,59 +766,95 @@ _h_   _l_   _o_k        _y_ank
 ;;   :straight t
 ;;   :bind ("C-." . ace-jump-mode))
 
-;; {{{ code utils
-(use-package lsp-mode
-  :straight t
-  :init
-  (setq lsp-keymap-prefix "M-g")
+;; {{{ code URLs
+;; (use-package lsp-mode
+;;   :straight t
+;;   :init
+;;   (setq lsp-keymap-prefix "M-g")
 
-  :config
-  (when (boundp 'read-process-output-max)
-    (setq-default read-process-output-max (* 1024 1024)))
+;;   :config
+;;   (when (boundp 'read-process-output-max)
+;;     (setq-default read-process-output-max (* 1024 1024)))
 
-  (defun enable-lsp ()
-    (lsp)
-    (lsp-completion-mode t))
+;;   (defun enable-lsp ()
+;;     (lsp)
+;;     (lsp-completion-mode t))
 
-  (setq lsp-rust-analyzer-cargo-watch-command "clippy")
+;;   (setq lsp-rust-analyzer-cargo-watch-command "clippy")
 
-  :hook
-  (python-mode . lsp-deferred)
-  (c++-mode . lsp-deferred)
-  (c-mode . lsp-deferred)
+;;   :hook
+;;   (python-mode . lsp-deferred)
+;;   (c++-mode . lsp-deferred)
+;;   (c-mode . lsp-deferred)
 
-  :commands (lsp lsp-deferred)
-)
+;;   :commands (lsp lsp-deferred)
+;; )
 
-(use-package lsp-ui
-  :straight (lsp-ui
-             :fork (:host github
-                          :repo "sadboy/lsp-ui"))
+;; (use-package lsp-ui
+;;   :straight (lsp-ui
+;;              :fork (:host github
+;;                           :repo "sadboy/lsp-ui"))
+;;   :bind
+;;   (:map lsp-ui-peek-mode-map
+;;         ("<left>" . lsp-ui-peek-scroll-left)
+;;         ("<right>" . lsp-ui-peek-scroll-right)
+;;         ("<down" . lsp-ui-peek-scroll-down)
+;;         ("<up>" . lsp-ui-peek-scroll-up))
+;;   :config
+;;   (setq lsp-ui-sideline-show-diagnostics t)
+;;   (setq lsp-ui-sideline-update-mode 'line)
+
+;;   (setq lsp-ui-doc-use-webkit nil)
+;;   (setq lsp-ui-peek-always-show nil)
+
+;;   (setq lsp-ui-imenu-auto-refresh t)
+
+;;   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
+;;   (define-key lsp-ui-mode-map (kbd "M-R") #'lsp-ui-peek-find-references)
+;;   (define-key lsp-ui-mode-map (kbd "M-?") #'lsp-ui-doc-focus-frame)
+;;   (define-key lsp-ui-mode-map (kbd "M-I") #'lsp-ui-imenu)
+;;   )
+;; (use-package lsp-ivy
+;;   :straight t
+;;   :bind
+;;   ("C-c o" . lsp-ivy-workspace-symbol)
+;;   ("C-c O" . lsp-ivy-global-workspace-symbol))
+
+(use-package eglot
   :bind
-  (:map lsp-ui-peek-mode-map
-        ("<left>" . lsp-ui-peek-scroll-left)
-        ("<right>" . lsp-ui-peek-scroll-right)
-        ("<down" . lsp-ui-peek-scroll-down)
-        ("<up>" . lsp-ui-peek-scroll-up))
+  (:map eglot-mode-map
+        ("C-." . eglot-code-actions)
+        ("M-R" . xref-find-references)
+        ("M-g M-r" . eglot-rename))
   :config
-  (setq lsp-ui-sideline-show-diagnostics t)
-  (setq lsp-ui-sideline-update-mode 'line)
-
-  (setq lsp-ui-doc-use-webkit nil)
-  (setq lsp-ui-peek-always-show nil)
-
-  (setq lsp-ui-imenu-auto-refresh t)
-
-  (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
-  (define-key lsp-ui-mode-map (kbd "M-R") #'lsp-ui-peek-find-references)
-  (define-key lsp-ui-mode-map (kbd "M-?") #'lsp-ui-doc-focus-frame)
-  (define-key lsp-ui-mode-map (kbd "M-I") #'lsp-ui-imenu)
+  (setq eglot-autoshutdown t)
+  ;; (setq eglot-extend-to-xref t)
   )
-(use-package lsp-ivy
-  :straight t
-  :bind
-  ("C-c o" . lsp-ivy-workspace-symbol)
-  ("C-c O" . lsp-ivy-global-workspace-symbol))
+
+(use-package copilot
+  :straight (:host github :repo "copilot-emacs/copilot.el" :files ("*.el"))
+  :ensure t
+  :config
+  (defun copilot-action-with-fallback (action &optional fallback)
+    `(lambda ()
+      (interactive)
+      (if (copilot--overlay-visible)
+          (call-interactively ',action)
+        (when (commandp ',fallback)
+          (call-interactively ',fallback)))
+    ))
+
+  (define-key copilot-mode-map (kbd "<tab>")
+              (copilot-action-with-fallback
+               #'copilot-accept-completion-by-line
+               #'indent-for-tab-command))
+  (define-key copilot-mode-map (kbd "C-<tab>")
+              (copilot-action-with-fallback #'copilot-accept-completion))
+  (define-key copilot-mode-map (kbd "M-]")
+              (copilot-action-with-fallback #'copilot-next-completion #'copilot-complete))
+  (define-key copilot-mode-map (kbd "M-[")
+              (copilot-action-with-fallback #'copilot-previous-completion #'copilot-complete))
+)
 
 (use-package dap-mode
   :straight t)
@@ -829,17 +865,22 @@ _h_   _l_   _o_k        _y_ank
   (setq dash-docs-common-docsets '("Python 3"))
   )
 
-(use-package lsp-python-ms
-  :straight t
-  :config
-  (require 'lsp-python-ms)
-  )
+;; (use-package lsp-python-ms
+;;   :straight t
+;;   :config
+;;   (require 'lsp-python-ms)
+;;   )
 
-(use-package lsp-pyright
-  :straight t)
+;; (use-package lsp-pyright
+;;   :straight t)
 
+;; Tree sitter is native in Emacs 29
 (use-package tree-sitter
   :straight t
+  ;; :config
+  ;; (require 'tree-sitter-langs)
+  ;; (global-tree-sitter-mode)
+  ;; (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
 )
 (use-package tree-sitter-langs
   :straight t
@@ -1074,20 +1115,28 @@ current buffer.
   :straight t)
 (use-package cmake-mode
   :straight t)
-;; (use-package rust-mode
-;;   :straight t)
+(use-package rust-mode
+  :straight t
+  ;; :init
+  ;; (setq rust-mode-treesitter-derive t)
+)
 ;; (use-package cargo
 ;;   :straight t
 ;;   :hook
 ;;   (rust-mode . cargo-minor-mode))
 (use-package rustic
-  :straight t)
+  :straight t
+  :after (rust-mode)
+  :init
+  (setq rustic-lsp-client 'eglot)
+)
 (use-package toml-mode
   :straight t)
 (use-package hack-mode
   :straight t
-  :config
-  (add-hook 'hack-mode-hook 'lsp))
+  ;; :config
+  ;; (add-hook 'hack-mode-hook 'lsp)
+  )
 (use-package d2-mode
   :straight t
   :mode
