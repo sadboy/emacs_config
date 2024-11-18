@@ -158,6 +158,10 @@
 
 ;; {{{ Global key bindings
 (global-set-key "\C-xQ" 'save-buffers-kill-emacs)
+(global-set-key (kbd "C-S-K") 'kill-current-buffer)
+(global-set-key (kbd "C-;") 'comment-or-uncomment-region)
+(global-set-key (kbd "C-S-S") 'window-toggle-side-windows)
+
 (global-set-key "\C-x\C-b" (lambda () (interactive) (ibuffer t nil nil nil t)))
 (global-set-key "\C-xg" 'rgrep)
 (global-set-key (kbd "M-s M-s") 'isearch-forward-symbol-at-point)
@@ -178,7 +182,6 @@
 (define-key ctrl-x-f-map "s" 'magit-status)
 (define-key ctrl-x-f-map "b" 'magit-blame)
 ;; (define-key ctrl-x-f-map "l" 'calendar)
-(global-set-key (kbd "C-S-s") 'magit-status)
 
 (defvar ctrl-x-comma-map (make-sparse-keymap))
 (define-key ctrl-x-comma-map "c" 'calculator)
@@ -695,7 +698,7 @@ _h_   _l_   _o_k        _y_ank
 (use-package minimap
   :straight t
   :bind
-  ("C-S-m" . minimap-mode))
+  ("M-S-RET" . minimap-mode))
 
 (use-package all-the-icons :straight t)
 (use-package all-the-icons-ivy :straight t)
@@ -979,6 +982,8 @@ current buffer.
         ("C-c C-c" . emacs-lisp-byte-compile)
         ("C-c C-l" . emacs-lisp-byte-compile-and-load)
         ("C-c C-r" . eval-region)
+        ("M-?" . describe-symbol)
+        ("M-R" . xref-find-references)
         )
   :config
   ;; (setq lisp-indent-function 'common-lisp-indent-function)
@@ -1083,6 +1088,10 @@ current buffer.
   :straight t
   :config
   (add-hook 'hack-mode-hook 'lsp))
+(use-package d2-mode
+  :straight t
+  :mode
+  ("\\.d2\\'". d2-mode))
 
 (use-package typescript-mode
   :straight t
@@ -1108,7 +1117,14 @@ current buffer.
                                      company-math-symbols-unicode)
             '(company-dabbrev-code company-dabbrev))))
   (add-hook 'text-mode-hook 'my-text-mode-hook)
-)
+  )
+
+(use-package flyspell
+  :config
+  (define-key flyspell-mode-map (kbd "C-;") nil t)
+  (define-key flyspell-mode-map (kbd "C-.") nil t)
+  (define-key flyspell-mode-map (kbd "C-,") nil t)
+  )
 
 (use-package yaml-mode
   :straight t)
