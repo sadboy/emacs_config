@@ -14,16 +14,68 @@
               fill-column 76
               default-directory "~/")
 
-(setq display-buffer-base-action
-      '((display-buffer--maybe-same-window
-         display-buffer-reuse-window
-         display-buffer-use-some-window
-         display-buffer--maybe-pop-up-frame-or-window
-         display-buffer-pop-up-window)
-        . ((reusable-frames . visible)))
+;; (setq display-buffer-base-action
+;;       '((
+;;          ;;display-buffer--maybe-same-window
+;;          display-buffer-reuse-window
+;;          display-buffer-use-some-window
+;;          display-buffer--maybe-pop-up-frame-or-window
+;;          display-buffer-pop-up-window)
+;;         . ((reusable-frames . visible)))
 
-      ;; same-window-regexps '("magit:.*")
-      )
+;;       ;; same-window-regexps '("magit:.*")
+;;       )
+
+;; (setq display-buffer-alist '(("^[*].*[*$]" display-buffer-at-bottom)
+;;                              ("^magit:.*" display-buffer-same-window)))
+(setq switch-to-buffer-obey-display-actions t)
+
+(setq display-buffer-alist
+      (list
+       '("^magit:.*"
+         (display-buffer-same-window))
+
+       '("^\\*\\(e?shell\\|ansi-term\\)\\*"
+         (display-buffer-in-side-window)
+         (side . bottom)
+         (slot . -1) ;; -1 == L  0 == Mid 1 == R
+         (window-height . 0.33) ;; take 2/3 on bottom left
+         (window-parameters
+          (no-delete-other-windows . t)))
+
+
+       '("^\\*\\([Hh]elp\\|eldoc.*\\|Command History\\|command-log\\)\\*"
+         (display-buffer-in-side-window)
+         (side . right)
+         (slot . 0)
+         (window-width . 80)
+         (window-parameters
+          (no-delete-other-windows . t)))
+
+       '("^\\*\\(Backtrace\\|Compile-log\\|Messages\\|Warnings\\)\\*"
+         (display-buffer-in-side-window)
+         (side . bottom)
+         (slot . 0)
+         (window-height . 0.33)
+         (window-parameters
+          (no-delete-other-windows . nil)))
+
+       '("^\\*TeX errors\\*"
+         (display-buffer-in-side-window)
+         (side . bottom)
+         (slot . 3)
+         (window-height . shrink-window-if-larger-than-buffer)
+         (dedicated . t))
+
+
+       '("^\\*TeX Help\\*"
+         (display-buffer-in-side-window)
+         (side . bottom)
+         (slot . 4)
+         (window-height . shrink-window-if-larger-than-buffer)
+         (dedicated . t))
+       ))
+
 (setq package-enable-at-startup nil
       ;; Don't change default temp directory on Mac:
       ;; temporary-file-directory (concat "/tmp/emacs_" (getenv "USER") "/")
@@ -71,6 +123,7 @@
 
       ;; eldoc-mode
       eldoc-idle-delay 0.2
+      eldoc-echo-area-use-multiline-p nil
 
       ;; minimap-mode:
       minimap-window-location 'right
