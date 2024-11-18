@@ -460,10 +460,11 @@
   (ivy-rich-mode t))
 
 (use-package company
-  :straight (company :type git
-                     :host github
-                     :repo "sadboy/company-mode"
-                     :branch "own-master")
+  :straight t
+  ;; :straight (company :type git
+  ;;                    :host github
+  ;;                    :repo "sadboy/company-mode"
+  ;;                    :branch "own-master")
   :bind
   ("M-/" . company-other-backend)
   :config
