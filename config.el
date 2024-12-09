@@ -1,7 +1,6 @@
 (eval-when-compile
   (straight-use-package 'use-package)
   (straight-use-package 'hydra)
-  (straight-use-package 'project)
   (require 'cl-lib)
   (require 'use-package)
   (require 'hydra))
@@ -14,67 +13,60 @@
               fill-column 76
               default-directory "~/")
 
-;; (setq display-buffer-base-action
-;;       '((
-;;          ;;display-buffer--maybe-same-window
-;;          display-buffer-reuse-window
-;;          display-buffer-use-some-window
-;;          display-buffer--maybe-pop-up-frame-or-window
-;;          display-buffer-pop-up-window)
-;;         . ((reusable-frames . visible)))
-
-;;       ;; same-window-regexps '("magit:.*")
-;;       )
-
-;; (setq display-buffer-alist '(("^[*].*[*$]" display-buffer-at-bottom)
-;;                              ("^magit:.*" display-buffer-same-window)))
 (setq switch-to-buffer-obey-display-actions t)
+(setq
+ display-buffer-alist
+ (list
+  ;; '(".*"
+  ;;   (display-buffer-reuse-window
+  ;;    display-buffer-same-window))
 
-(setq display-buffer-alist
-      (list
-       '("^magit:.*"
-         (display-buffer-same-window))
+  '("^magit:.*"
+    (display-buffer-reuse-window
+     display-buffer-same-window))
 
-       '("^\\*\\(e?shell\\|ansi-term\\)\\*"
-         (display-buffer-in-side-window)
-         (side . bottom)
-         (slot . -1) ;; -1 == L  0 == Mid 1 == R
-         (window-height . 0.33) ;; take 2/3 on bottom left
-         (window-parameters
-          (no-delete-other-windows . t)))
+  '("^\\*\\(e?shell\\|ansi-term\\|eat\\)\\*"
+    (display-buffer-in-side-window)
+    (side . bottom)
+    (window . root)
+    (slot . -1) ;; -1 == L  0 == Mid 1 == R
+    (window-height . 0.33) ;; take 2/3 on bottom left
+    (window-parameters
+     (no-delete-other-windows . nil)))
 
+  '("^\\*\\([Hh]elp\\|eldoc.*\\|info\\|Command History\\|command-log\\)\\*"
+    (display-buffer-in-side-window
+     display-buffer-reuse-window
+     display-buffer-same-window)
+    (side . right)
+    (slot . 0)
+    (window-width . 80)
+    (window-parameters
+     (no-delete-other-windows . t)))
 
-       '("^\\*\\([Hh]elp\\|eldoc.*\\|Command History\\|command-log\\)\\*"
-         (display-buffer-in-side-window)
-         (side . right)
-         (slot . 0)
-         (window-width . 80)
-         (window-parameters
-          (no-delete-other-windows . t)))
+  '("^\\*\\(xref.*\\|Backtrace\\|Compile-log\\|Flymake diagnostics.*\\|Messages\\|Warnings\\)\\*"
+    (display-buffer-in-side-window)
+    (side . bottom)
+    (slot . 0)
+    (window-height . shrink-window-if-larger-than-buffer)
+    (window-parameters
+     (no-delete-other-windows . nil)))
 
-       '("^\\*\\(Backtrace\\|Compile-log\\|Messages\\|Warnings\\)\\*"
-         (display-buffer-in-side-window)
-         (side . bottom)
-         (slot . 0)
-         (window-height . 0.33)
-         (window-parameters
-          (no-delete-other-windows . nil)))
+  '("^\\*TeX errors\\*"
+    (display-buffer-in-side-window)
+    (side . bottom)
+    (slot . 3)
+    (window-height . shrink-window-if-larger-than-buffer)
+    (dedicated . t))
 
-       '("^\\*TeX errors\\*"
-         (display-buffer-in-side-window)
-         (side . bottom)
-         (slot . 3)
-         (window-height . shrink-window-if-larger-than-buffer)
-         (dedicated . t))
+  '("^\\*TeX Help\\*"
+    (display-buffer-in-side-window)
+    (side . bottom)
+    (slot . 4)
+    (window-height . shrink-window-if-larger-than-buffer)
+    (dedicated . t))
 
-
-       '("^\\*TeX Help\\*"
-         (display-buffer-in-side-window)
-         (side . bottom)
-         (slot . 4)
-         (window-height . shrink-window-if-larger-than-buffer)
-         (dedicated . t))
-       ))
+  ))
 
 (setq package-enable-at-startup nil
       ;; Don't change default temp directory on Mac:
@@ -109,7 +101,8 @@
       set-mark-command-repeat-pop t
       tramp-default-method "sshx"
 
-      window-min-height 10
+      window-min-width 24
+      window-min-height 8
 
       ;; abbrev-file-name "~/emacs/abbrev_defs"
       save-abbrevs t
@@ -120,10 +113,6 @@
       flymake-start-syntax-check-on-newline nil
 
       compilation-scroll-output 'first-error
-
-      ;; eldoc-mode
-      eldoc-idle-delay 0.2
-      eldoc-echo-area-use-multiline-p nil
 
       ;; minimap-mode:
       minimap-window-location 'right
