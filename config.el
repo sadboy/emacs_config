@@ -201,6 +201,22 @@
 ;; }}}
 
 ;; {{{ Builtin packages:
+(use-package tramp
+  :config
+  (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
+  )
+(use-package eldoc
+  :config
+  (setq
+   eldoc-idle-delay 0.2
+   eldoc-echo-area-use-multiline-p nil
+   eldoc-echo-area-prefer-doc-buffer 'maybe
+   ))
+(use-package project
+  :bind
+  (:map ctrl-x-f-map
+        ("p" . project-find-file))
+  )
 (use-package ffap
   ;; :init
   ;; (ffap-bindings)
@@ -325,6 +341,9 @@
   (setq winner-dont-bind-my-keys t)
   (winner-mode t)
   (setq winner-ring-size 12))
+(use-package sql
+  :mode
+  ("\\.sql\\'" . sql-mode))
 ;; }}}
 
 (use-package flx :straight t)
@@ -353,7 +372,7 @@
   :straight t
   :bind
   ("C-'" . avy-goto-char)
-  ("M-z" . avy-goto-char-2)
+  ;;("M-z" . avy-goto-char-2)
   ("C-\"" . avy-goto-line)
   (:map isearch-mode-map
         ("C-'" . avy-isearch)))
@@ -372,19 +391,20 @@
   (setq ivy-height 25)
   :bind
   (:map ivy-minibuffer-map
-        ("RET" . ivy-alt-done))
+        ("RET" . ivy-alt-done)
+        ("C-M-m" . ivy-call-and-recenter))
   (:map ctrl-x-comma-map
         ("," . ivy-resume)
         ("r" . ivy-resume)))
 (use-package counsel
   :straight t
   :bind
-  ("M-x". counsel-M-x)
+  ("M-x" . counsel-M-x)
+  ("M-y" . counsel-yank-pop)
   ("C-h f" . counsel-describe-function)
   ("C-h v" . counsel-describe-variable)
   ("C-c i" . counsel-semantic-or-imenu)
   (:map ctrl-x-f-map
-        ("p" . counsel-projectile)
         ("g" . counsel-rg))
   (:map ctrl-x-comma-map
         ("SPC" . counsel-mark-ring)
@@ -412,10 +432,11 @@
           ("M-o" . do-rg-from-isearch))
     )
   )
-(use-package counsel-projectile
-  :straight t
-  :config
-  (setq counsel-projectile-rg-initial-input '(projectile-symbol-or-selection-at-point)))
+;; (use-package counsel-projectile
+;;   :straight t
+;;   :config
+;;   (setq counsel-projectile-rg-initial-input '(projectile-symbol-or-selection-at-point)))
+
 (use-package swiper
   :straight t
   :bind
@@ -575,6 +596,7 @@
            (setq this-command 'winner-undo))
      )
     ("y" winner-redo)
+    ("?" winner-redo)
     )
 
   (defhydra hydra-next-error (global-map "M-g")
@@ -669,6 +691,12 @@ _h_   _l_   _o_k        _y_ank
   :bind
   ("C-x W" . w3m))
 
+(use-package eat
+  :straight t
+  :bind
+  ("C-S-t" . eat)
+  )
+
 (use-package wgrep
   :straight t
   :config
@@ -680,7 +708,6 @@ _h_   _l_   _o_k        _y_ank
 (use-package treemacs
   :straight t
   :bind
-  ("C-S-t" . treemacs)
   (:map ctrl-x-comma-map
         ("t" . treemacs)))
 
@@ -692,20 +719,6 @@ _h_   _l_   _o_k        _y_ank
 (use-package all-the-icons :straight t)
 (use-package all-the-icons-ivy :straight t)
 (use-package all-the-icons-gnus :straight t)
-
-(use-package project
-  :straight t)
-
-(use-package projectile
-  :straight t
-  :bind-keymap
-  ("C-x p" . projectile-command-map)
-  :bind
-  (:map ctrl-x-f-map
-        ("o" . projectile-find-other-file )))
-
-(use-package treemacs-projectile
-  :straight t)
 
 (use-package magit
   :straight t
@@ -732,9 +745,10 @@ _h_   _l_   _o_k        _y_ank
         org-fontify-whole-heading-line t
         org-fontify-done-headline t
         org-fontify-quote-and-verse-blocks t)
-  (font-lock-add-keywords 'org-mode
-                          '(("^ +\\([-*]\\) "
-                           (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•")))))))
+  (font-lock-add-keywords
+   'org-mode
+   '(("^ +\\([-*]\\) "
+      (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•")))))))
 
 (use-package org-bullets
   :straight t
@@ -751,70 +765,18 @@ _h_   _l_   _o_k        _y_ank
   :init
   (which-key-mode t))
 
-;; (use-package ace-jump-mode
-;;   :straight t
-;;   :bind ("C-." . ace-jump-mode))
-
-;; {{{ code URLs
-;; (use-package lsp-mode
-;;   :straight t
-;;   :init
-;;   (setq lsp-keymap-prefix "M-g")
-
-;;   :config
-;;   (when (boundp 'read-process-output-max)
-;;     (setq-default read-process-output-max (* 1024 1024)))
-
-;;   (defun enable-lsp ()
-;;     (lsp)
-;;     (lsp-completion-mode t))
-
-;;   (setq lsp-rust-analyzer-cargo-watch-command "clippy")
-
-;;   :hook
-;;   (python-mode . lsp-deferred)
-;;   (c++-mode . lsp-deferred)
-;;   (c-mode . lsp-deferred)
-
-;;   :commands (lsp lsp-deferred)
-;; )
-
-;; (use-package lsp-ui
-;;   :straight (lsp-ui
-;;              :fork (:host github
-;;                           :repo "sadboy/lsp-ui"))
-;;   :bind
-;;   (:map lsp-ui-peek-mode-map
-;;         ("<left>" . lsp-ui-peek-scroll-left)
-;;         ("<right>" . lsp-ui-peek-scroll-right)
-;;         ("<down" . lsp-ui-peek-scroll-down)
-;;         ("<up>" . lsp-ui-peek-scroll-up))
-;;   :config
-;;   (setq lsp-ui-sideline-show-diagnostics t)
-;;   (setq lsp-ui-sideline-update-mode 'line)
-
-;;   (setq lsp-ui-doc-use-webkit nil)
-;;   (setq lsp-ui-peek-always-show nil)
-
-;;   (setq lsp-ui-imenu-auto-refresh t)
-
-;;   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
-;;   (define-key lsp-ui-mode-map (kbd "M-R") #'lsp-ui-peek-find-references)
-;;   (define-key lsp-ui-mode-map (kbd "M-?") #'lsp-ui-doc-focus-frame)
-;;   (define-key lsp-ui-mode-map (kbd "M-I") #'lsp-ui-imenu)
-;;   )
-;; (use-package lsp-ivy
-;;   :straight t
-;;   :bind
-;;   ("C-c o" . lsp-ivy-workspace-symbol)
-;;   ("C-c O" . lsp-ivy-global-workspace-symbol))
-
 (use-package eglot
   :bind
   (:map eglot-mode-map
         ("C-." . eglot-code-actions)
         ("M-R" . xref-find-references)
-        ("M-g M-r" . eglot-rename))
+        ("M-?" . eldoc-doc-buffer)
+        ("M-g M-r" . eglot-rename)
+        ("M-g M-f" . eglot-format)
+        ("M-g M-p" . flymake-goto-prev-error)
+        ("M-g M-n" . flymake-goto-next-error)
+        ("C-c C-m" . flymake-show-project-diagnostics)
+        )
   :config
   (setq eglot-autoshutdown t)
   ;; (setq eglot-extend-to-xref t)
@@ -998,9 +960,9 @@ current buffer.
 
 (use-package prog-mode
   :bind
-  (:map prog-mode-map
-        ("M-N" . flymake-goto-next-error)
-        ("M-P" . flymake-goto-prev-error))
+  ;; (:map prog-mode-map
+  ;;       ("M-N" . flymake-goto-next-error)
+  ;;       ("M-P" . flymake-goto-prev-error))
   :config
   (add-hook 'prog-mode-hook 'my-prog-mode-hook)
 )
@@ -1203,6 +1165,32 @@ current buffer.
   ;; Fixup isearch highlighting
   (set-face-bold 'lazy-highlight nil)
   )
+;; }}}
+
+;; {{{ Github integration
+;; required dependencies
+;; (straight-use-package 'org-ql)
+;; (straight-use-package 's)
+;; (straight-use-package 'ts)
+
+;; ;; optional
+;; (straight-use-package
+;;  '(el-csv
+;;   :type git
+;;   :host github
+;;   :repo "mrc/el-csv"
+;;   :branch "master"
+;;   :files ("parse-csv.el")))
+
+;; ;; om-dash
+;; (straight-use-package
+;;  '(om-dash
+;;   :type git
+;;   :host github
+;;   :repo "gavv/om-dash"
+;;   :branch "main"
+;;   :files ("om-dash.el")))
+
 ;; }}}
 
 (provide 'config)
