@@ -1,6 +1,8 @@
 (eval-when-compile
   (straight-use-package 'use-package)
   (straight-use-package 'hydra)
+  (straight-use-package '(project :type built-in))
+  (straight-use-package '(xref :type built-in))
   (require 'cl-lib)
   (require 'use-package)
   (require 'hydra))
@@ -473,11 +475,11 @@
   (ivy-rich-mode t))
 
 (use-package company
-  :straight t
-  ;; :straight (company :type git
-  ;;                    :host github
-  ;;                    :repo "sadboy/company-mode"
-  ;;                    :branch "own-master")
+  ;; :straight t
+  :straight (company :type git
+                     :host github
+                     :repo "sadboy/company-mode"
+                     :branch "own-master")
   :bind
   ("M-/" . company-other-backend)
   :config
@@ -761,7 +763,6 @@ _h_   _l_   _o_k        _y_ank
   ("\\.mdx\\'". markdown-mode))
 
 (use-package which-key
-  :straight t
   :init
   (which-key-mode t))
 
