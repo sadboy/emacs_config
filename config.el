@@ -800,13 +800,27 @@ _h_   _l_   _o_k        _y_ank
               (copilot-action-with-fallback
                #'copilot-accept-completion-by-line
                #'indent-for-tab-command))
+  (define-key copilot-mode-map (kbd "C-M-f")
+              (copilot-action-with-fallback
+               #'copilot-accept-completion-by-word
+               #'forward-sexp))
   (define-key copilot-mode-map (kbd "C-<tab>")
               (copilot-action-with-fallback #'copilot-accept-completion))
   (define-key copilot-mode-map (kbd "M-]")
               (copilot-action-with-fallback #'copilot-next-completion #'copilot-complete))
   (define-key copilot-mode-map (kbd "M-[")
               (copilot-action-with-fallback #'copilot-previous-completion #'copilot-complete))
-)
+  )
+
+(use-package gptel
+  :straight t
+  :config
+  (setq gptel-backend (gptel-make-gemini "Gemini" :key (lambda () (getenv "GEMINI_TOKEN")) :stream t))
+  (setq gptel-model 'gemini-2.0-flash)
+  :bind
+  ("C-c g ?" . gptel-ask)
+  ("C-c g g" . gptel-send)
+ )
 
 (use-package dap-mode
   :straight t)
