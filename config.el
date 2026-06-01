@@ -1,11 +1,13 @@
 (eval-when-compile
-  (straight-use-package 'use-package)
-  (straight-use-package 'hydra)
-  (straight-use-package '(project :type built-in))
-  (straight-use-package '(xref :type built-in))
+  ;; (straight-use-package 'use-package)
+  ;; (straight-use-package 'hydra)
+  ;; (straight-use-package '(project :type built-in))
+  ;; (straight-use-package '(xref :type built-in))
   (require 'cl-lib)
   (require 'use-package)
-  (require 'hydra))
+  ;; (use-package 'hydra
+  ;;   :ensure t)
+  )
 
 (setq-default abbrev-mode t
               bidi-paragraph-direction 'left-to-right
@@ -348,9 +350,9 @@
   ("\\.sql\\'" . sql-mode))
 ;; }}}
 
-(use-package flx :straight t)
+(use-package flx :ensure t)
 (use-package dired-narrow
-  :straight t
+  :ensure t
   :bind
   (:map dired-mode-map
         ("C-x N" . dired-narrow)
@@ -360,18 +362,18 @@
   (dired-mode . dired-narrow-mode))
 
 (use-package multiple-cursors
-  :straight t
+  :ensure t
   :bind
   ("C-S-<mouse-1>" . mc/add-cursor-on-click)
-  ;; ("M-N" . mc/mark-next-like-this)
-  ;; ("M-P" . mc/mark-previous-like-this)
+  ("M-N" . mc/mark-next-like-this)
+  ("M-P" . mc/mark-previous-like-this)
   :config
   ;; (setq mc/list-file "~/.emacs.d/mc.list.el")
   ;; mc/always-run-for-all t
   )
 
 (use-package avy
-  :straight t
+  :ensure t
   :bind
   ("C-'" . avy-goto-char)
   ;;("M-z" . avy-goto-char-2)
@@ -500,32 +502,33 @@
   (global-company-mode t))
 
 (use-package ace-window
-  :straight t)
+  :ensure t)
 
 (use-package buffer-move
-  :straight t
+  :ensure t
   :config
   (setq buffer-move-stay-after-swap nil
         buffer-move-behavior 'move))
 
 (use-package rotate
-  :straight t)
+  :ensure t)
 
 (use-package basic
   :after hydra
   :demand t
+  :load-path "~/emacs/config"
   :config
   (defhydra hydra-window ()
-;;     "
-;; Movement^^        ^Split^         ^Switch^		^Resize^
-;; ----------------------------------------------------------------
-;; _h_ ←       	_v_ertical    	_b_uffer		_H_ X←
-;; _j_ ↓        	_x_ horizontal	_f_ind files	_J_ X↓
-;; _k_ ↑        	_z_ undo      			_K_ X↑
-;; _l_ →        	_Z_ reset      			_L_ X→
-;; _F_ollow	   	_S_ave		max_i_mize
-;; _SPC_ cancel	_1_ only this   	_d_elete	
-;; "
+    ;;     "
+    ;; Movement^^        ^Split^         ^Switch^		^Resize^
+    ;; ----------------------------------------------------------------
+    ;; _h_ ←       	_v_ertical    	_b_uffer		_H_ X←
+    ;; _j_ ↓        	_x_ horizontal	_f_ind files	_J_ X↓
+    ;; _k_ ↑        	_z_ undo      			_K_ X↑
+    ;; _l_ →        	_Z_ reset      			_L_ X→
+    ;; _F_ollow	   	_S_ave		max_i_mize
+    ;; _SPC_ cancel	_1_ only this   	_d_elete	
+    ;; "
     ("h" windmove-left)
     ("j" windmove-down)
     ("k" windmove-up)
@@ -606,11 +609,12 @@
     ("n" next-error "next")
     ("p" previous-error "previous"))
 
-  (defhydra hydra-rectangle (:body-pre (progn
-                                         (rectangle-mark-mode 1)
-                                         (activate-mark))
-                             :color pink
-                             :post (deactivate-mark))
+  (defhydra hydra-rectangle
+    (:body-pre (progn
+                 (rectangle-mark-mode 1)
+                 (activate-mark))
+               :color pink
+               :post (deactivate-mark))
     "
   ^_k_^     _d_elete    s_t_ring
 _h_   _l_   _o_k        _y_ank
@@ -681,55 +685,51 @@ _h_   _l_   _o_k        _y_ank
   )
 
 (use-package grep-context
-  :straight (grep-context
-             :fork (:host github
-                          :repo "sadboy/grep-context"))
+  :ensure t
+  :vc (:url "https://github.com/sadboy/grep-context.git")
   :hook
   (grep-mode . grep-context-mode)
   (compilation-mode . grep-context-mode))
 
 (use-package w3m
-  :straight t
+  :ensure t
   :bind
   ("C-x W" . w3m))
 
 (use-package eat
-  :straight t
+  :ensure t
   :bind
   ("C-S-t" . eat)
   )
 
 (use-package wgrep
-  :straight t
+  :ensure t
   :config
   (setq wgrep-auto-save-buffer t))
 
-(use-package ivy-hydra
-  :straight t)
-
 (use-package treemacs
-  :straight t
+  :ensure t
   :bind
   (:map ctrl-x-comma-map
         ("t" . treemacs)))
 
 (use-package minimap
-  :straight t
+  :ensure t
   :bind
-  ("M-S-RET" . minimap-mode))
+  ("M-S-m" . minimap-mode))
 
-(use-package all-the-icons :straight t)
-(use-package all-the-icons-ivy :straight t)
-(use-package all-the-icons-gnus :straight t)
+(use-package all-the-icons :ensure t)
+(use-package all-the-icons-ivy :ensure t)
+(use-package all-the-icons-gnus :ensure t)
 
 (use-package magit
-  :straight t
+  :ensure t
   :config
   (setq magit-auto-revert-mode nil
         magit-last-seen-setup-instructions "1.4.0"))
 
 (use-package org
-  :straight t
+  :ensure t
   :config
   (use-package ox-md)
   (setq org-latex-listings 'minted
@@ -753,14 +753,18 @@ _h_   _l_   _o_k        _y_ank
       (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•")))))))
 
 (use-package org-bullets
-  :straight t
+  :ensure t
   :hook
   (org-mode . org-bullets-mode))
 
 (use-package markdown-mode
-  :straight t
+  :ensure t
   :mode
-  ("\\.mdx\\'". markdown-mode))
+  ("\\.mdx\\'". markdown-mode)
+  :bind
+  (:map markdown-mode-map
+        ("C-c C-v" . markdown-preview))
+)
 
 (use-package which-key
   :init
@@ -784,9 +788,13 @@ _h_   _l_   _o_k        _y_ank
   )
 
 (use-package copilot
-  :straight (:host github :repo "copilot-emacs/copilot.el" :files ("*.el"))
   :ensure t
+  :vc (copilot :url "https://github.com/copilot-emacs/copilot.el")
+
+  :hook (prog-mode . copilot-mode)
   :config
+  (setq
+        copilot-indent-offset-warning-disable t)
   (defun copilot-action-with-fallback (action &optional fallback)
     `(lambda ()
       (interactive)
@@ -813,7 +821,7 @@ _h_   _l_   _o_k        _y_ank
   )
 
 (use-package gptel
-  :straight t
+  :ensure t
   :config
   (setq gptel-backend (gptel-make-gemini "Gemini" :key (lambda () (getenv "GEMINI_TOKEN")) :stream t))
   (setq gptel-model 'gemini-2.0-flash)
@@ -823,33 +831,33 @@ _h_   _l_   _o_k        _y_ank
  )
 
 (use-package dap-mode
-  :straight t)
+  :ensure t)
 
 (use-package dash-docs
-  :straight t
+  :ensure t
   :config
   (setq dash-docs-common-docsets '("Python 3"))
   )
 
 ;; (use-package lsp-python-ms
-;;   :straight t
+;;   :ensure t
 ;;   :config
 ;;   (require 'lsp-python-ms)
 ;;   )
 
 ;; (use-package lsp-pyright
-;;   :straight t)
+;;   :ensure t)
 
 ;; Tree sitter is native in Emacs 29
 (use-package tree-sitter
-  :straight t
+  :ensure t
   ;; :config
   ;; (require 'tree-sitter-langs)
   ;; (global-tree-sitter-mode)
   ;; (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
 )
 (use-package tree-sitter-langs
-  :straight t
+  :ensure t
   :config
   (add-hook 'python-mode-hook #'tree-sitter-hl-mode)
   (add-hook 'rust-mode-hook #'tree-sitter-hl-mode)
@@ -859,16 +867,19 @@ _h_   _l_   _o_k        _y_ank
   )
 
 (use-package pyvenv
-  :straight t
+  :ensure t
   :init
   (setenv "WORKON_HOME" (getenv "PYTHON_VENVS"))
   :hook
   (python-mode . (lambda () (pyvenv-mode t))))
 
 (use-package symbol-overlay
-  :straight (symbol-overlay
-             :fork (:host github
-                          :repo "sadboy/symbol-overlay"))
+  :ensure t
+  ;; :straight (symbol-overlay
+  ;;            :fork (:host github
+  ;;                         :repo "sadboy/symbol-overlay"))
+  :vc (:url "https://github.com/sadboy/symbol-overlay.git")
+
   :init
   ;; (put 'symbol-overlay-default-face 'face-alias 'secondary-selection)
   (setq symbol-overlay-idle-time 0.2)
@@ -1069,7 +1080,7 @@ current buffer.
   ("\\.g4\\'" . antlr-mode))
 
 (use-package ahk-mode
-  :straight t
+  :ensure t
   :config
   (add-hook 'ahk-mode-hook
             (lambda ()
@@ -1078,43 +1089,42 @@ current buffer.
                 (symbol-overlay-mode 1)
                 (symbol-overlay-nav-mode 1)))))
 (use-package cython-mode
-  :straight t)
+  :ensure t)
 (use-package cmake-mode
-  :straight t)
+  :ensure t)
 (use-package rust-mode
-  :straight t
+  :ensure t
   ;; :init
   ;; (setq rust-mode-treesitter-derive t)
 )
 ;; (use-package cargo
-;;   :straight t
+;;   :ensure t
 ;;   :hook
 ;;   (rust-mode . cargo-minor-mode))
 (use-package rustic
-  :straight t
+  :ensure t
   :after (rust-mode)
   :init
   (setq rustic-lsp-client 'eglot)
 )
 (use-package toml-mode
-  :straight t)
+  :ensure t)
 (use-package hack-mode
-  :straight t
+  :ensure t
   ;; :config
   ;; (add-hook 'hack-mode-hook 'lsp)
   )
 (use-package d2-mode
-  :straight t
+  :ensure t
   :mode
   ("\\.d2\\'". d2-mode))
 
 (use-package typescript-mode
-  :straight t
+  :ensure t
   :mode
   ("\\.tsx\\'" . typescript-mode))
 
-(use-package thrift-mode
-  :straight t
+(use-package thrift
   :mode
   ("\\.thrift\\'" . thrift-mode))
 
@@ -1142,13 +1152,13 @@ current buffer.
   )
 
 (use-package yaml-mode
-  :straight t)
+  :ensure t)
 ;; }}}
 
 ;; {{{ Theming
 (use-package doom-themes
   ;; :if window-system
-  :straight t
+  :ensure t
   :config
   ;; Global settings (defaults)
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
