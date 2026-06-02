@@ -27,33 +27,6 @@
 (require 'tramp)
 
 ;;;###autoload
-(defun my-shell (&optional buffer)
-  "Use `default-directory' of current buffer as working dir of `*shell*' buffer.
-Also, switch to `*shell*' buffer.
-Optional arg BUFFER has same meaning as for command `shell'."
-  (interactive ; code taken from `shell'
-   (list
-    (if current-prefix-arg
-        (read-buffer "Shell buffer: "
-                     (generate-new-buffer-name "*shell*")))))
-  (unless default-directory
-    (error "default-directory of current buffer is nil"))
-  (let ((edir (expand-file-name default-directory))
-        (cdir
-         (concat "cd "
-                 (shell-quote-argument (expand-file-name default-directory)))))
-    (shell (get-buffer-create (or buffer "*shell*")))
-    ;; change directory, unless we are already where we want to be
-    (unless (string= edir (expand-file-name default-directory))
-      (goto-char (point-max))
-      (if (looking-back comint-prompt-regexp nil)
-          (progn (insert cdir)
-                 (comint-send-input))
-        (message "shell `%s' seems to be busy, cannot change directory"
-                 (buffer-name))
-        (comint-add-to-input-history cdir)))))
-
-;;;###autoload
 (defun bo-add-dir-local-variable ()
   (interactive)
   (let ((dir (ido-read-directory-name "Set var at:")))
