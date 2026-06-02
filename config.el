@@ -1,12 +1,6 @@
 (eval-when-compile
-  ;; (straight-use-package 'use-package)
-  ;; (straight-use-package 'hydra)
-  ;; (straight-use-package '(project :type built-in))
-  ;; (straight-use-package '(xref :type built-in))
   (require 'cl-lib)
   (require 'use-package)
-  ;; (use-package 'hydra
-  ;;   :ensure t)
   )
 
 (setq-default abbrev-mode t
@@ -17,59 +11,40 @@
               fill-column 76
               default-directory "~/")
 
-(setq switch-to-buffer-obey-display-actions t)
+(setq switch-to-buffer-obey-display-actions t
+      ;; Make left and right side windows take full height:
+      window-sides-vertical t)
 (setq
  display-buffer-alist
  (list
-  ;; '(".*"
-  ;;   (display-buffer-reuse-window
-  ;;    display-buffer-same-window))
-
-  '("^magit:.*"
+  '("^\\*scratch.*\\*"
     (display-buffer-reuse-window
      display-buffer-same-window))
 
-  '("^\\*\\(e?shell\\|ansi-term\\|eat\\)\\*"
-    (display-buffer-in-side-window)
-    (side . bottom)
-    (window . root)
-    (slot . -1) ;; -1 == L  0 == Mid 1 == R
-    (window-height . 0.33) ;; take 2/3 on bottom left
-    (window-parameters
-     (no-delete-other-windows . nil)))
-
-  '("^\\*\\([Hh]elp\\|eldoc.*\\|info\\|Command History\\|command-log\\)\\*"
-    (display-buffer-in-side-window
-     display-buffer-reuse-window
+  '("^\\(\\*\\([Hh]elp.*\\|eldoc.*\\|info.*\\|Command History\\|command-log\\)\\*\\)\\|^magit:.*"
+    (display-buffer-reuse-window
+     display-buffer-in-side-window
      display-buffer-same-window)
     (side . right)
-    (slot . 0)
+    ;; (slot . 0)
+    (window . root)
     (window-width . 80)
     (window-parameters
      (no-delete-other-windows . t)))
 
-  '("^\\*\\(xref.*\\|Backtrace\\|Compile-log\\|Flymake diagnostics.*\\|Messages\\|Warnings\\)\\*"
-    (display-buffer-in-side-window)
+  '("^\\*.*\\*\\(<[[:digit:]]+>\\)?$"
+    (display-buffer-reuse-window
+     display-buffer-in-side-window
+     display-buffer-same-window)
     (side . bottom)
-    (slot . 0)
-    (window-height . shrink-window-if-larger-than-buffer)
+    ;; (window . root)
+    (window-height . 0.25)
     (window-parameters
-     (no-delete-other-windows . nil)))
+     (no-delete-other-windows . t)))
 
-  '("^\\*TeX errors\\*"
-    (display-buffer-in-side-window)
-    (side . bottom)
-    (slot . 3)
-    (window-height . shrink-window-if-larger-than-buffer)
-    (dedicated . t))
-
-  '("^\\*TeX Help\\*"
-    (display-buffer-in-side-window)
-    (side . bottom)
-    (slot . 4)
-    (window-height . shrink-window-if-larger-than-buffer)
-    (dedicated . t))
-
+  ;; '(".*"
+  ;;   (display-buffer-reuse-window
+  ;;    display-buffer-same-window))
   ))
 
 (setq package-enable-at-startup nil
