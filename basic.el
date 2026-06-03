@@ -193,6 +193,36 @@ trying to acquire the rights with sudo (and tramp)"
 ;;* Helpers
 (require 'windmove)
 
+;; Like `window-toggle-side-windows', but only toggles the window on the
+;; specified side.
+;;;###autoload
+(defun basic/toggle-window-on-side (side)
+  "Toggle the bottom side window."
+  (interactive)
+  (let* ((frame (window-normalize-frame nil))
+         (state-key
+          (cond
+           ((eq side 'top) 'top-window-state)
+           ((eq side 'bottom) 'bottom-window-state)
+           ((eq side 'left) 'left-window-state)
+           ((eq side 'right) 'right-window-state)
+           (t (error "Invalid side %s specified" side))))
+         ;;(window--sides-inhibit-check t)
+         (window (window-with-parameter 'window-side side frame))
+         (saved-state (frame-parameter frame state-key)))
+
+    (cond
+     ((window-live-p window)
+      (let ((state (window-state-get window)))
+        (set-frame-parameter frame state-key state)
+        (delete-window window)))
+     (saved-state
+      (let ((window
+             (window--make-major-side-window (current-buffer) side 0)))
+        (window-state-put saved-state window)))
+     (t
+      (error "No %s window state found" side)))))
+
 ;;;###autoload
 (defun hydra-move-splitter-left (arg)
   "Move window splitter left."

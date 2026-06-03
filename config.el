@@ -14,6 +14,8 @@
 (setq switch-to-buffer-obey-display-actions t
       ;; Make left and right side windows take full height:
       window-sides-vertical t)
+(add-to-list 'window-persistent-parameters '(no-delete-other-windows . writable))
+
 (setq
  display-buffer-alist
  (list
@@ -26,13 +28,13 @@
      display-buffer-in-side-window
      display-buffer-same-window)
     (side . right)
-    ;; (slot . 0)
+    (slot . 0)
     (window . root)
     (window-width . 80)
     (window-parameters
      (no-delete-other-windows . t)))
 
-  '("^\\*.*\\*\\(<[[:digit:]]+>\\)?$"
+  '("^\\*.*\\*\\(<[[:digit:]]+>\\)?$\\|^magit-log:.*"
     (display-buffer-reuse-window
      display-buffer-in-side-window
      display-buffer-same-window)
