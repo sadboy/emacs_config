@@ -46,6 +46,17 @@
     (message "Tab width set to %d (was %d)" arg tab-width)
     (setq tab-width arg)))
 
+(defun basic/action-from-isearch (action)
+  "Invoke `action' on the current isearch query."
+  (let ((case-fold-search isearch-case-fold-search)
+        (query (if isearch-regexp
+                   isearch-string
+                 (if (or (eq isearch-regexp-function 'isearch-symbol-regexp)
+                         (eq isearch-regexp-function 'word-search-regexp))
+                     (format "\\b%s\\b" (regexp-quote isearch-string))
+                   (regexp-quote isearch-string)))))
+    (isearch-exit)
+    (funcall action query)))
 
 ;; {{{ highlighting
 (defface basic-highlight
@@ -193,10 +204,177 @@ trying to acquire the rights with sudo (and tramp)"
 ;;* Helpers
 (require 'windmove)
 
+(defvar basic-buffer-move-behavior 'swap
+  "If set to 'swap (default), the buffers will be exchanged
+  (i.e. swapped), if set to 'move, the current window is switch back to the
+  previously displayed buffer (i.e. the buffer is moved)."
+)
+
+(defun basic--direction-to-side (direction)
+  "Convert a direction (must be 'up, 'down, 'left or 'right) to the
+   corresponding window side (must be 'top, 'bottom, 'left or 'right)."
+  (cond
+   ((eq direction 'up) 'top)
+   ((eq direction 'down) 'bottom)
+   ((eq direction 'left) 'left)
+   ((eq direction 'right) 'right)
+   (t (error "Invalid direction %s specified" direction))))
+
+(defun basic/buf-move-to (direction)
+  "Helper function to move the current buffer to the window in the given
+   direction (must be 'up, 'down, 'left or 'right). An error is thrown,
+   if no window exists in this direction."
+  (cl-flet ((window-settings (window)
+              (list (window-buffer window)
+                    (window-start window)
+                    (window-hscroll window)
+                    (window-point window)))
+            (set-window-settings (window settings)
+              (cl-destructuring-bind (buffer start hscroll point)
+                  settings
+                (set-window-buffer window buffer)
+                (set-window-start window start)
+                (set-window-hscroll window hscroll)
+                (set-window-point window point))))
+    (let* ((this-window (selected-window))
+           (this-window-settings (window-settings this-window))
+           (other-window (windmove-find-other-window direction))
+           (other-window-settings (window-settings other-window)))
+      (cond
+       ((or (null other-window) (window-minibuffer-p other-window))
+        (if (window-parameter this-window 'window-side)
+            (error "No window in this direction")
+          (basic/toggle-window-on-side
+           (basic--direction-to-side direction))
+          (select-window this-window)
+          (setq other-window (windmove-find-other-window direction)
+                other-window-settings (window-settings other-window))
+          (when (null other-window)
+            (error "Can not create new window in this direction"))))
+       ((not (memq (window-dedicated-p other-window) '(nil side)))
+        (error "The window in this direction is dedicated")))
+
+      (set-window-settings other-window this-window-settings)
+      (select-window other-window)
+
+      (cond
+       ((eq basic-buffer-move-behavior 'move)
+        (switch-to-prev-buffer this-window))
+       ((eq basic-buffer-move-behavior 'swap)
+        (set-window-settings this-window other-window-settings))
+       ((eq basic-buffer-move-behavior 'combine)
+        (if (eq (window-dedicated-p this-window) 'side)
+            (basic/toggle-window-on-side
+             (window-parameter this-window 'window-side))
+          (delete-window this-window)))
+       ;; fall-through: 'dup
+       )
+
+      other-window
+      )))
+
+(defun basic/focus-side-window (side)
+  "Focus the side window on the given side (must be 'top, 'bottom, 'left or
+'right)."
+  (let ((window (window-with-parameter 'window-side side)))
+    (if window
+        (select-window window)
+      (basic/toggle-window-on-side side))))
+
+;;;###autoload
+(defun basic/focus-left-side-window ()
+  (interactive)
+  (basic/focus-side-window 'left))
+
+;;;###autoload
+(defun basic/focus-right-side-window ()
+  (interactive)
+  (basic/focus-side-window 'right))
+
+;;;###autoload
+(defun basic/focus-top-side-window ()
+  (interactive)
+  (basic/focus-side-window 'top))
+
+;;;###autoload
+(defun basic/focus-bottom-side-window ()
+  (interactive)
+  (basic/focus-side-window 'bottom))
+
+;;;###autoload
+(defun basic/buf-move-up ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'move)) (basic/buf-move-to 'up)))
+
+;;;###autoload
+(defun basic/buf-move-down ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'move)) (basic/buf-move-to 'down)))
+
+;;;###autoload
+(defun basic/buf-move-left ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'move)) (basic/buf-move-to 'left)))
+
+;;;###autoload
+(defun basic/buf-move-right ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'move)) (basic/buf-move-to 'right)))
+
+;;;###autoload
+(defun basic/buf-combine-up ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'combine)) (basic/buf-move-to 'up)))
+
+;;;###autoload
+(defun basic/buf-combine-down ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'combine)) (basic/buf-move-to 'down)))
+
+;;;###autoload
+(defun basic/buf-combine-left ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'combine)) (basic/buf-move-to 'left)))
+
+;;;###autoload
+(defun basic/buf-combine-right ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'combine)) (basic/buf-move-to 'right)))
+
+;;;###autoload
+(defun basic/buf-dup-up ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'dup)) (basic/buf-move-to 'up)))
+
+;;;###autoload
+(defun basic/buf-dup-down ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'dup)) (basic/buf-move-to 'down)))
+
+;;;###autoload
+(defun basic/buf-dup-left ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'dup)) (basic/buf-move-to 'left)))
+
+;;;###autoload
+(defun basic/buf-dup-right ()
+  (interactive)
+  (let ((basic-buffer-move-behavior 'dup)) (basic/buf-move-to 'right)))
+
+(defun basic--top-level-window-on-side (side)
+  "Return the top-level window on the given side (must be 'top, 'bottom,)
+'left or 'right), or nil if there is no such window."
+  (let ((window (window-with-parameter 'window-side side)))
+    (while (and window (window-parent window)
+                (window-parameter (window-parent window) 'window-side))
+      (setq window (window-parent window)))
+    window
+    ))
+
 ;; Like `window-toggle-side-windows', but only toggles the window on the
 ;; specified side.
 ;;;###autoload
-(defun basic/toggle-window-on-side (side)
+(defun basic/toggle-window-on-side (side &optional no-select)
   "Toggle the bottom side window."
   (interactive)
   (let* ((frame (window-normalize-frame nil))
@@ -207,26 +385,60 @@ trying to acquire the rights with sudo (and tramp)"
            ((eq side 'left) 'left-window-state)
            ((eq side 'right) 'right-window-state)
            (t (error "Invalid side %s specified" side))))
-         ;;(window--sides-inhibit-check t)
-         (window (window-with-parameter 'window-side side frame))
+         (window--sides-inhibit-check t)
+         (window (basic--top-level-window-on-side side))
          (saved-state (frame-parameter frame state-key)))
 
     (cond
-     ((window-live-p window)
-      (let ((state (window-state-get window)))
-        (set-frame-parameter frame state-key state)
+     (window
+      (let* ((window-state (window-state-get window))
+             (height (window-total-height window))
+             (width (window-total-width window))
+             (saved-state (list window-state height width))
+             (ignore-window-parameters t))
+        (set-frame-parameter frame state-key saved-state)
         (delete-window window)))
      (saved-state
-      (let ((window
-             (window--make-major-side-window (current-buffer) side 0)))
-        (window-state-put saved-state window)))
+      (let ((ignore-window-parameters t)
+            (window-combination-resize t)
+            (window-state (nth 0 saved-state))
+            (height (nth 1 saved-state))
+            (width (nth 2 saved-state))
+            (window
+             (display-buffer-in-side-window
+              (current-buffer)
+              `((side . ,side)
+                (window . root)
+                (window-parameters . ((no-delete-other-windows . t)))))))
+        (window-state-put window-state window)
+        ;; (set-window-dedicated-p window 'side)
+        (cond
+         ((memq side '(top bottom))
+          (window-resize window (- height (window-total-height window)) nil))
+         ((memq side '(left right))
+          (window-resize window (- width (window-total-width window)) t)))
+        (unless no-select
+          (select-window window))))
      (t
-      (error "No %s window state found" side)))))
+      (let ((new-win (display-buffer-in-side-window
+                      (other-buffer (current-buffer))
+                      `((side . ,side)
+                        (slot . 0)
+                        (window . root)
+                        (window-width . 80)
+                        (window-height . 0.25)
+                        (window-parameters . ((no-delete-other-windows . t)))))))
+        ;; (unless (null new-win)
+        ;;   (set-window-dedicated-p new-win 'side))
+        new-win))
+     )))
 
 ;;;###autoload
 (defun hydra-move-splitter-left (arg)
   "Move window splitter left."
-  (interactive "p")
+  (interactive "P")
+  (when (null arg)
+    (setq arg 8))
   (if (let ((windmove-wrap-around))
         (windmove-find-other-window 'right))
       (shrink-window-horizontally arg)
@@ -235,7 +447,9 @@ trying to acquire the rights with sudo (and tramp)"
 ;;;###autoload
 (defun hydra-move-splitter-right (arg)
   "Move window splitter right."
-  (interactive "p")
+  (interactive "P")
+  (when (null arg)
+    (setq arg 8))
   (if (let ((windmove-wrap-around))
         (windmove-find-other-window 'right))
       (enlarge-window-horizontally arg)
@@ -244,7 +458,9 @@ trying to acquire the rights with sudo (and tramp)"
 ;;;###autoload
 (defun hydra-move-splitter-up (arg)
   "Move window splitter up."
-  (interactive "p")
+  (interactive "P")
+  (when (null arg)
+    (setq arg 8))
   (if (let ((windmove-wrap-around))
         (windmove-find-other-window 'up))
       (enlarge-window arg)
@@ -253,13 +469,18 @@ trying to acquire the rights with sudo (and tramp)"
 ;;;###autoload
 (defun hydra-move-splitter-down (arg)
   "Move window splitter down."
-  (interactive "p")
+  (interactive "P")
+  (when (null arg)
+    (setq arg 8))
   (if (let ((windmove-wrap-around))
         (windmove-find-other-window 'up))
       (shrink-window arg)
     (enlarge-window arg)))
 
-(defvar rectangle-mark-mode)
+(eval-when-compile
+  (require 'rect)
+  (defvar rectangle-mark-mode))
+
 ;;;###autoload
 (defun hydra-ex-point-mark ()
   "Exchange point and mark."
