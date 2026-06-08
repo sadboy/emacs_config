@@ -183,14 +183,54 @@
 
 ;; {{{ Builtin packages:
 (use-package tramp
+  :init
+  (connection-local-set-profile-variables
+   'remote-direct-async-process
+   '((tramp-direct-async-process . t)))
+  (connection-local-set-profile-variables
+   'remote-vterm-profile
+   '((shell-file-name . "/bin/bash")))
+
   :config
+  (setq ;;remote-file-name-inhibit-locks t
+        tramp-use-scp-direct-remote-copying t
+        remote-file-name-inhibit-auto-save-visited t)
+  (setq tramp-copy-size-limit (* 1024 1024) ;; 1MB
+        tramp-verbose 2)
+  (setq enable-remote-dir-locals t)
+
+  ;; Note: vc is required by project.el to find the project root, so can not be
+  ;; disabled: (setq vc-ignore-dir-regexp (format "\\(%s\\)\\|\\(%s\\)"
+  ;; vc-ignore-dir-regexp tramp-file-name-regexp))
+
+  (connection-local-set-profiles
+   '(:application tramp :protocol "ssh")
+   'remote-direct-async-process)
+
+  (add-to-list 'tramp-connection-properties (list "/ssh:" "direct-async" t))
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
+  )
+;; Note: this actually makes things worse (and breaks project.el as well):
+;; (use-package tramp-hlo
+;;     :ensure t
+;;     :config
+;;     (tramp-hlo-setup)
+;; )
+
+(use-package recentf
+  :init
+  (recentf-mode 1)
+  :config
+  (setq recentf-max-saved-items 1000
+        recentf-max-menu-items 15
+        recentf-exclude '("/tmp/" "/ssh:" "/sudo:" "/su:" "/gpg:" "/docker:"))
   )
 (use-package eldoc
   :config
   (setq
-   eldoc-idle-delay 0.2
+   ;; eldoc-idle-delay 0.2
    eldoc-echo-area-use-multiline-p nil
+   eldoc-echo-area-display-truncation-message nil
    eldoc-echo-area-prefer-doc-buffer 'maybe
    ))
 (use-package project
