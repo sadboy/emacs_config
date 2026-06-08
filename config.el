@@ -13,41 +13,18 @@
 
 (setq switch-to-buffer-obey-display-actions t
       ;; Make left and right side windows take full height:
-      window-sides-vertical t)
+      window-sides-vertical t
+      split-width-threshold 160
+      split-height-threshold 80
+      )
+(setopt display-buffer-base-actions
+        '((display-buffer-reuse-window
+           display-buffer-in-previous-window
+           display-buffer-use-some-window
+           display-buffer--maybe-pop-up-window
+           display-buffer-same-window)
+          (reusable-frames . nil)))
 (add-to-list 'window-persistent-parameters '(no-delete-other-windows . writable))
-
-(setq
- display-buffer-alist
- (list
-  '("^\\*scratch.*\\*"
-    (display-buffer-reuse-window
-     display-buffer-same-window))
-
-  '("^\\(\\*\\([Hh]elp.*\\|eldoc.*\\|info.*\\|Command History\\|command-log\\)\\*\\)\\|^magit:.*"
-    (display-buffer-reuse-window
-     display-buffer-in-side-window
-     display-buffer-same-window)
-    (side . right)
-    (slot . 0)
-    (window . root)
-    (window-width . 80)
-    (window-parameters
-     (no-delete-other-windows . t)))
-
-  '("^\\*.*\\*\\(<[[:digit:]]+>\\)?$\\|^magit-log:.*"
-    (display-buffer-reuse-window
-     display-buffer-in-side-window
-     display-buffer-same-window)
-    (side . bottom)
-    ;; (window . root)
-    (window-height . 0.25)
-    (window-parameters
-     (no-delete-other-windows . t)))
-
-  ;; '(".*"
-  ;;   (display-buffer-reuse-window
-  ;;    display-buffer-same-window))
-  ))
 
 (setq package-enable-at-startup nil
       ;; Don't change default temp directory on Mac:
@@ -166,10 +143,10 @@
 
 (global-set-key "\M-z" 'my-zap-or-goto-char)
 
-(global-set-key (kbd "<C-S-up>")     'buf-move-up)
-(global-set-key (kbd "<C-S-down>")   'buf-move-down)
-(global-set-key (kbd "<C-S-left>")   'buf-move-left)
-(global-set-key (kbd "<C-S-right>")  'buf-move-right)
+(global-set-key (kbd "<C-S-up>")     'basic/buf-move-up)
+(global-set-key (kbd "<C-S-down>")   'basic/buf-move-down)
+(global-set-key (kbd "<C-S-left>")   'basic/buf-move-left)
+(global-set-key (kbd "<C-S-right>")  'basic/buf-move-right)
 
 (global-set-key (kbd "C-<") 'previous-buffer)
 (global-set-key (kbd "C->") 'next-buffer)
@@ -521,11 +498,11 @@
 (use-package ace-window
   :ensure t)
 
-(use-package buffer-move
-  :ensure t
-  :config
-  (setq buffer-move-stay-after-swap nil
-        buffer-move-behavior 'move))
+;; (use-package golden-ratio
+;;   :ensure t
+;;   :config
+;;   (setq golden-ratio-exclude-buffer-names '("*Help*" "*info*"))
+;;   (golden-ratio-mode t))
 
 (use-package rotate
   :ensure t)
@@ -535,6 +512,36 @@
   :demand t
   :load-path "~/emacs/config"
   :config
+  (setq display-buffer-alist
+        (list
+         '("^\\*scratch.*\\*"
+           (display-buffer-reuse-window
+            display-buffer-same-window))
+
+         '("^ ?\\*Treemacs-Buffer-"
+           (display-buffer-reuse-window
+            display-buffer--maybe-left-panel
+            display-buffer--maybe-right-panel
+            display-buffer-same-window))
+
+         '("^\\(\\*\\(Ilist\\)\\*\\)$"
+           (display-buffer-reuse-window
+            display-buffer--maybe-left-panel-lower
+            display-buffer--maybe-right-panel
+            display-buffer-same-window))
+
+         '("^\\(\\*\\([Hh]elp.*\\|eldoc.*\\|info.*\\|Command History\\)\\*\\)\\|^magit:.*"
+           (display-buffer-reuse-window
+            display-buffer--maybe-right-panel
+            display-buffer--maybe-bottom-panel
+            display-buffer-same-window))
+
+         '("^ *\\*.*\\*\\(<[[:digit:]]+>\\)?$\\|^magit-log:.*"
+           (display-buffer-reuse-window
+            display-buffer--maybe-bottom-panel
+            display-buffer-same-window))
+         ))
+
   (defhydra hydra-window ()
     ;;     "
     ;; Movement^^        ^Split^         ^Switch^		^Resize^
@@ -550,10 +557,10 @@
     ("j" windmove-down)
     ("k" windmove-up)
     ("l" windmove-right)
-    ("H" (buf-move-left))
-    ("J" (buf-move-down))
-    ("K" (buf-move-up))
-    ("L" (buf-move-right))
+    ("H" basic/buf-move-left)
+    ("J" basic/buf-move-down)
+    ("K" basic/buf-move-up)
+    ("L" basic/buf-move-right)
     ("{" hydra-move-splitter-left)
     ("_" hydra-move-splitter-down)
     ("^" hydra-move-splitter-up)
@@ -656,31 +663,36 @@ _h_   _l_   _o_k        _y_ank
     ("o" nil nil)
     ("q" nil nil))
 
+  (global-set-key (kbd "s-1") 'basic/focus-left-side-window)
+  (global-set-key (kbd "s-2") 'basic/focus-top-side-window)
+  (global-set-key (kbd "s-3") 'basic/focus-right-side-window)
+  (global-set-key (kbd "s-4") 'basic/focus-bottom-side-window)
+
   (global-set-key (kbd "s-h") 'windmove-left)
   (global-set-key (kbd "s-j") 'windmove-down)
   (global-set-key (kbd "s-k") 'windmove-up)
   (global-set-key (kbd "s-l") 'windmove-right)
-  (global-set-key (kbd "s-H") 'buf-move-left)
-  (global-set-key (kbd "s-J") 'buf-move-down)
-  (global-set-key (kbd "s-K") 'buf-move-up)
-  (global-set-key (kbd "s-L") 'buf-move-right)
-  (global-set-key (kbd "C-s-h") 'hydra-move-splitter-left)
-  (global-set-key (kbd "C-s-j") 'hydra-move-splitter-down)
-  (global-set-key (kbd "C-s-k") 'hydra-move-splitter-up)
-  (global-set-key (kbd "C-s-l") 'hydra-move-splitter-right)
+  (global-set-key (kbd "s-H") 'basic/buf-move-left)
+  (global-set-key (kbd "s-J") 'basic/buf-move-down)
+  (global-set-key (kbd "s-K") 'basic/buf-move-up)
+  (global-set-key (kbd "s-L") 'basic/buf-move-right)
+  (global-set-key (kbd "C-s-h") 'basic/buf-dup-left)
+  (global-set-key (kbd "C-s-j") 'basic/buf-dup-down)
+  (global-set-key (kbd "C-s-k") 'basic/buf-dup-up)
+  (global-set-key (kbd "C-s-l") 'basic/buf-dup-right)
   ;; For terminal:
   (global-set-key (kbd "<f9>") 'windmove-left)
   (global-set-key (kbd "<f10>") 'windmove-down)
   (global-set-key (kbd "<f11>") 'windmove-up)
   (global-set-key (kbd "<f12>") 'windmove-right)
-  (global-set-key (kbd "S-<f9>") 'buf-move-left)
-  (global-set-key (kbd "S-<f10>") 'buf-move-down)
-  (global-set-key (kbd "S-<f11>") 'buf-move-up)
-  (global-set-key (kbd "S-<f12>") 'buf-move-right)
-  (global-set-key (kbd "M-<f9>") 'hydra-move-splitter-left)
-  (global-set-key (kbd "M-<f10>") 'hydra-move-splitter-down)
-  (global-set-key (kbd "M-<f11>") 'hydra-move-splitter-up)
-  (global-set-key (kbd "M-<f12>") 'hydra-move-splitter-right)
+  (global-set-key (kbd "S-<f9>") 'basic/buf-move-left)
+  (global-set-key (kbd "S-<f10>") 'basic/buf-move-down)
+  (global-set-key (kbd "S-<f11>") 'basic/buf-move-up)
+  (global-set-key (kbd "S-<f12>") 'basic/buf-move-right)
+  (global-set-key (kbd "M-<f9>") 'basic/buf-dup-left)
+  (global-set-key (kbd "M-<f10>") 'basic/buf-dup-down)
+  (global-set-key (kbd "M-<f11>") 'basic/buf-dup-up)
+  (global-set-key (kbd "M-<f12>") 'basic/buf-dup-right)
 
   (global-set-key (kbd "C-x w") 'hydra-window/body)
   (global-set-key (kbd "C-S-w") 'hydra-window/body)
@@ -697,6 +709,16 @@ _h_   _l_   _o_k        _y_ank
   (global-set-key (kbd "C-x }") 'hydra-window/hydra-move-splitter-right)
 
   (global-set-key (kbd "C-x SPC") 'hydra-rectangle/body)
+
+  (global-set-key (kbd "C-S-m") (lambda ()
+                                   (interactive)
+                                   (basic/toggle-window-on-side 'bottom t)))
+  (global-set-key (kbd "C-S-s") (lambda ()
+                                   (interactive)
+                                   (basic/toggle-window-on-side 'right t)))
+  (global-set-key (kbd "C-M-S-s") (lambda ()
+                                   (interactive)
+                                   (basic/toggle-window-on-side 'left t)))
 
   (global-set-key "\C-x\C-q" 'really-toggle-read-only)
   )
