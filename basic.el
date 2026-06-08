@@ -1,4 +1,4 @@
-;;; basic.el --- My own convenience commands and helper functions
+;;; basic.el --- My own convenience commands and helper functions  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2020  Bo Lin
 
@@ -56,6 +56,7 @@
                      (format "\\b%s\\b" (regexp-quote isearch-string))
                    (regexp-quote isearch-string)))))
     (isearch-exit)
+    (deactivate-mark)
     (funcall action query)))
 
 ;; {{{ highlighting
@@ -204,6 +205,96 @@ trying to acquire the rights with sudo (and tramp)"
 ;;* Helpers
 (require 'windmove)
 
+(defvar basic/min-frame-width-for-right-panel 160
+  "Minimum frame width for the right panel to be used.")
+(defvar basic/min-frame-height-for-bottom-panel 36
+  "Minimum frame height for the bottom panel to be used.")
+(defvar basic/min-frame-width-for-left-panel 220
+  "Minimum frame width for the left panel to be used.")
+
+(defconst basic--side-window-additional-parameters
+  '((window-parameters
+     (no-delete-other-windows . t)
+     (delete-window . basic--maybe-save-state-then-delete))))
+
+(defun display-buffer--maybe-right-panel (buffer alist)
+  "Display BUFFER in the main slot of the right panel of the selected frame
+if the frame is at least `basic/min-frame-width-for-right-panel' columns
+ wide. Otherwise, return nil."
+  (and (or (window-live-p (window-with-parameter 'window-side 'right))
+           (when (>= (frame-width) basic/min-frame-width-for-right-panel)
+             (basic--maybe-restore-saved-state-on 'right)
+             t))
+       (display-buffer-in-side-window
+        buffer
+        `((side . right)
+          (slot . 0)
+          (window . root)
+          (window-width . 80)
+          ,@basic--side-window-additional-parameters))))
+
+(defun display-buffer--maybe-bottom-panel (buffer alist)
+  "Display BUFFER in the bottom panel of the selected frame if the frame is
+at least `basic/min-frame-height-for-bottom-panel' lines tall.
+Otherwise, return nil."
+  (and (or (window-live-p (window-with-parameter 'window-side 'bottom))
+           (when (>= (frame-height) basic/min-frame-height-for-bottom-panel)
+             (basic--maybe-restore-saved-state-on 'bottom)
+             t))
+       (display-buffer-in-side-window
+        buffer
+        `((side . bottom)
+          (window . root)
+          (window-height . 0.25)
+          ,@basic--side-window-additional-parameters))))
+
+(defun display-buffer--maybe-top-panel (buffer alist)
+  "Display BUFFER in the top panel of the selected frame if the frame is)
+at least `basic/min-frame-height-for-bottom-panel' lines tall.
+Otherwise, return nil."
+  (and (or (window-live-p (window-with-parameter 'window-side 'top))
+           (when (>= (frame-height) basic/min-frame-height-for-bottom-panel)
+             (basic--maybe-restore-saved-state-on 'top)
+             t))
+       (display-buffer-in-side-window
+        buffer
+        `((side . top)
+          (window . root)
+          (window-height . 0.12)
+          ,@basic--side-window-additional-parameters))))
+
+(defun display-buffer--maybe-left-panel (buffer alist)
+  "Display BUFFER in the main slot of the left panel of the selected frame
+if the frame is at least `basic/min-frame-width-for-left-panel' columns
+wide. Otherwise, return nil."
+  (and (or (window-live-p (window-with-parameter 'window-side 'left))
+           (when (>= (frame-width) basic/min-frame-width-for-left-panel)
+             (basic--maybe-restore-saved-state-on 'left)
+             t))
+       (display-buffer-in-side-window
+        buffer
+        `((side . left)
+          (slot . 0)
+          (window . root)
+          (window-width . 60)
+          ,@basic--side-window-additional-parameters))))
+
+(defun display-buffer--maybe-left-panel-lower (buffer alist)
+  "Display BUFFER in the top slot of the left panel of the selected frame
+if the frame is at least `basic/min-frame-width-for-right-panel' columns
+wide. Otherwise, return nil."
+  (and (or (window-live-p (window-with-parameter 'window-side 'left))
+           (when (> (frame-width) basic/min-frame-width-for-left-panel)
+             (basic--maybe-restore-saved-state-on 'left)
+             t))
+       (display-buffer-in-side-window
+        buffer
+        `((side . left)
+          (slot . 1)
+          (window . root)
+          (window-width . 60)
+          ,@basic--side-window-additional-parameters))))
+
 (defvar basic-buffer-move-behavior 'swap
   "If set to 'swap (default), the buffers will be exchanged
   (i.e. swapped), if set to 'move, the current window is switch back to the
@@ -211,7 +302,7 @@ trying to acquire the rights with sudo (and tramp)"
 )
 
 (defun basic--direction-to-side (direction)
-  "Convert a direction (must be 'up, 'down, 'left or 'right) to the
+  "Convert a direction (`'up', `'down', `'left' or `'right') to the
    corresponding window side (must be 'top, 'bottom, 'left or 'right)."
   (cond
    ((eq direction 'up) 'top)
@@ -220,10 +311,20 @@ trying to acquire the rights with sudo (and tramp)"
    ((eq direction 'right) 'right)
    (t (error "Invalid direction %s specified" direction))))
 
+(defun basic--side-to-state-key (side)
+  "Convert a window side (must be 'top, 'bottom, 'left or 'right) to the
+   corresponding frame parameter key for saving the window state."
+  (cond
+   ((eq side 'top) 'top-window-state)
+   ((eq side 'bottom) 'bottom-window-state)
+   ((eq side 'left) 'left-window-state)
+   ((eq side 'right) 'right-window-state)
+   (t (error "Invalid side %s specified" side))))
+
 (defun basic/buf-move-to (direction)
   "Helper function to move the current buffer to the window in the given
-   direction (must be 'up, 'down, 'left or 'right). An error is thrown,
-   if no window exists in this direction."
+   direction (must be \='up, \='down, \='left or \='right). An error is
+   thrown, if no window exists in this direction."
   (cl-flet ((window-settings (window)
               (list (window-buffer window)
                     (window-start window)
@@ -244,10 +345,18 @@ trying to acquire the rights with sudo (and tramp)"
        ((or (null other-window) (window-minibuffer-p other-window))
         (if (window-parameter this-window 'window-side)
             (error "No window in this direction")
-          (basic/toggle-window-on-side
-           (basic--direction-to-side direction))
-          (select-window this-window)
-          (setq other-window (windmove-find-other-window direction)
+          (setq other-window
+                (cond
+                 ((eq direction 'up)
+                  (display-buffer--maybe-top-panel (current-buffer) nil))
+                 ((eq direction 'down)
+                  (display-buffer--maybe-bottom-panel (current-buffer) nil))
+                 ((eq direction 'left)
+                  (display-buffer--maybe-left-panel (current-buffer) nil))
+                 ((eq direction 'right)
+                  (display-buffer--maybe-right-panel (current-buffer) nil))
+                 (t (error "Invalid direction %s specified" direction)))
+
                 other-window-settings (window-settings other-window))
           (when (null other-window)
             (error "Can not create new window in this direction"))))
@@ -273,11 +382,119 @@ trying to acquire the rights with sudo (and tramp)"
       other-window
       )))
 
-(defun basic/focus-side-window (side)
-  "Focus the side window on the given side (must be 'top, 'bottom, 'left or
-'right)."
+(defun basic--top-level-window-on (side)
+  "Return the top-level window on the given side, or nil if there is no
+such window."
   (let ((window (window-with-parameter 'window-side side)))
-    (if window
+    (while (and window (window-parent window)
+                (window-parameter (window-parent window) 'window-side))
+      (setq window (window-parent window)))
+    window
+    ))
+
+(defun basic--maybe-restore-saved-state-on (side)
+  "If there is a saved state for the side window on `side', and there is
+sufficient space in the current frame layout, restore it and return the
+window. Otherwise, return nil."
+  (let ((ignore-window-parameters t)
+        (window-combination-resize nil)
+        (window--sides-inhibit-check t)
+        (saved-state
+         (frame-parameter (window-normalize-frame nil)
+                          (basic--side-to-state-key side)))
+        window window-state height width)
+    (and saved-state
+         (setq window-state (nth 0 saved-state))
+         (setq height (nth 1 saved-state))
+         (setq width (nth 2 saved-state))
+         (cond
+          ((memq side '(top bottom))
+           (>= (window-total-height (window-main-window))
+               (+ height window-min-height)))
+          ((memq side '(left right))
+           (>= (window-total-width (window-main-window))
+               (+ width window-min-width)))
+          (t (error "Invalid side %s specified" side)))
+         (setq window
+               (display-buffer-in-side-window
+                (current-buffer)
+                `((side . ,side)
+                  (window . root)
+                  (window-parameters . ((no-delete-other-windows . t))))))
+         (window-live-p window)
+         (let ()
+           (cond
+            ((memq side '(top bottom))
+             (window-resize window (- height (window-total-height window)) nil))
+            ((memq side '(left right))
+             (window-resize window (- width (window-total-width window)) t)))
+           (window-state-put window-state window)
+           (unless (window-live-p window)
+             (set-frame-parameter (window-normalize-frame nil)
+                                  (basic--side-to-state-key side) nil)
+             (error "%s side window state corrupted." side))
+           (set-window-parameter window 'delete-window
+                                 'basic--maybe-save-state-then-delete)
+           (set-window-dedicated-p window 'side)
+           window))))
+
+(defun basic--save-side-window-state (side)
+  "Save the state of the side window on `side' in the frame parameters."
+  (let ((window (basic--top-level-window-on side)))
+    (when window
+      (let* ((window-state (window-state-get window))
+             (height (window-total-height window))
+             (width (window-total-width window))
+             (state-key (basic--side-to-state-key side))
+             (ignore-window-parameters t))
+        (set-frame-parameter
+         (window-normalize-frame nil) state-key
+         (list window-state height width)))
+      window)))
+
+(defun basic--maybe-save-state-then-delete (window)
+  "If WINDOW is a side window, save its state in the frame parameters.
+Either way, delete WINDOW."
+  (let ((side (window-parameter window 'window-side))
+        (window--sides-inhibit-check t)
+        (ignore-window-parameters t))
+    (when side
+      (basic--save-side-window-state side))
+    (delete-window window)))
+
+;; Like `window-toggle-side-windows', but only toggles the window on the
+;; specified side.
+;;;###autoload
+(defun basic/toggle-window-on-side (side &optional no-select)
+  "Toggle the current frame's side window on SIDE."
+  (interactive)
+  (let ((window--sides-inhibit-check t)
+        (ignore-window-parameters t)
+        window)
+    (cond
+     ((setq window (basic--save-side-window-state side))
+      (delete-window window))
+     (t
+      (let ((window (basic--maybe-restore-saved-state-on side)))
+        (if window
+            (unless no-select
+              (select-window window))
+          (error "No previous state for %s panel, \
+or not enough space to restore it" side))))
+     )))
+
+(defun basic/reset-side-window-states ()
+  "Reset the saved states for all side windows in the current frame."
+  (interactive)
+  (set-frame-parameter (window-normalize-frame nil) 'top-window-state nil)
+  (set-frame-parameter (window-normalize-frame nil) 'bottom-window-state nil)
+  (set-frame-parameter (window-normalize-frame nil) 'left-window-state nil)
+  (set-frame-parameter (window-normalize-frame nil) 'right-window-state nil))
+
+(defun basic/focus-side-window (side)
+  (let ((window (window-with-parameter 'window-side side)))
+    (if (and (window-live-p window)
+             (not (eq window (selected-window))))
         (select-window window)
       (basic/toggle-window-on-side side))))
 
@@ -360,78 +577,6 @@ trying to acquire the rights with sudo (and tramp)"
 (defun basic/buf-dup-right ()
   (interactive)
   (let ((basic-buffer-move-behavior 'dup)) (basic/buf-move-to 'right)))
-
-(defun basic--top-level-window-on-side (side)
-  "Return the top-level window on the given side (must be 'top, 'bottom,)
-'left or 'right), or nil if there is no such window."
-  (let ((window (window-with-parameter 'window-side side)))
-    (while (and window (window-parent window)
-                (window-parameter (window-parent window) 'window-side))
-      (setq window (window-parent window)))
-    window
-    ))
-
-;; Like `window-toggle-side-windows', but only toggles the window on the
-;; specified side.
-;;;###autoload
-(defun basic/toggle-window-on-side (side &optional no-select)
-  "Toggle the bottom side window."
-  (interactive)
-  (let* ((frame (window-normalize-frame nil))
-         (state-key
-          (cond
-           ((eq side 'top) 'top-window-state)
-           ((eq side 'bottom) 'bottom-window-state)
-           ((eq side 'left) 'left-window-state)
-           ((eq side 'right) 'right-window-state)
-           (t (error "Invalid side %s specified" side))))
-         (window--sides-inhibit-check t)
-         (window (basic--top-level-window-on-side side))
-         (saved-state (frame-parameter frame state-key)))
-
-    (cond
-     (window
-      (let* ((window-state (window-state-get window))
-             (height (window-total-height window))
-             (width (window-total-width window))
-             (saved-state (list window-state height width))
-             (ignore-window-parameters t))
-        (set-frame-parameter frame state-key saved-state)
-        (delete-window window)))
-     (saved-state
-      (let ((ignore-window-parameters t)
-            (window-combination-resize t)
-            (window-state (nth 0 saved-state))
-            (height (nth 1 saved-state))
-            (width (nth 2 saved-state))
-            (window
-             (display-buffer-in-side-window
-              (current-buffer)
-              `((side . ,side)
-                (window . root)
-                (window-parameters . ((no-delete-other-windows . t)))))))
-        (window-state-put window-state window)
-        ;; (set-window-dedicated-p window 'side)
-        (cond
-         ((memq side '(top bottom))
-          (window-resize window (- height (window-total-height window)) nil))
-         ((memq side '(left right))
-          (window-resize window (- width (window-total-width window)) t)))
-        (unless no-select
-          (select-window window))))
-     (t
-      (let ((new-win (display-buffer-in-side-window
-                      (other-buffer (current-buffer))
-                      `((side . ,side)
-                        (slot . 0)
-                        (window . root)
-                        (window-width . 80)
-                        (window-height . 0.25)
-                        (window-parameters . ((no-delete-other-windows . t)))))))
-        ;; (unless (null new-win)
-        ;;   (set-window-dedicated-p new-win 'side))
-        new-win))
-     )))
 
 ;;;###autoload
 (defun hydra-move-splitter-left (arg)
