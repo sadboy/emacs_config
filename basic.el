@@ -248,21 +248,6 @@ Otherwise, return nil."
           (window-height . 0.25)
           ,@basic--side-window-additional-parameters))))
 
-(defun display-buffer--maybe-top-panel (buffer alist)
-  "Display BUFFER in the top panel of the selected frame if the frame is)
-at least `basic/min-frame-height-for-bottom-panel' lines tall.
-Otherwise, return nil."
-  (and (or (window-live-p (window-with-parameter 'window-side 'top))
-           (when (>= (frame-height) basic/min-frame-height-for-bottom-panel)
-             (basic--maybe-restore-saved-state-on 'top)
-             t))
-       (display-buffer-in-side-window
-        buffer
-        `((side . top)
-          (window . root)
-          (window-height . 0.12)
-          ,@basic--side-window-additional-parameters))))
-
 (defun display-buffer--maybe-left-panel (buffer alist)
   "Display BUFFER in the main slot of the left panel of the selected frame
 if the frame is at least `basic/min-frame-width-for-left-panel' columns
@@ -348,7 +333,7 @@ wide. Otherwise, return nil."
           (setq other-window
                 (cond
                  ((eq direction 'up)
-                  (display-buffer--maybe-top-panel (current-buffer) nil))
+                  nil)
                  ((eq direction 'down)
                   (display-buffer--maybe-bottom-panel (current-buffer) nil))
                  ((eq direction 'left)
@@ -428,7 +413,8 @@ window. Otherwise, return nil."
              (window-resize window (- height (window-total-height window)) nil))
             ((memq side '(left right))
              (window-resize window (- width (window-total-width window)) t)))
-           (window-state-put window-state window)
+           (let ((window-restore-killed-buffer-windows t))
+             (window-state-put window-state window))
            (unless (window-live-p window)
              (set-frame-parameter (window-normalize-frame nil)
                                   (basic--side-to-state-key side) nil)

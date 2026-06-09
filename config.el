@@ -737,7 +737,7 @@
   )
 
 (use-package basic
-  :after hydra
+  :after hydra transient
   :demand t
   :load-path "~/emacs/config"
   :config
@@ -746,6 +746,18 @@
          '("^\\*scratch.*\\*\\|^COMMIT_EDITMSG$"
            (display-buffer-reuse-window
             display-buffer-same-window))
+
+         ;; transient popup:
+         `(,(format "^%s$" (regexp-quote transient--buffer-name))
+           (display-buffer-reuse-window
+            display-buffer-in-side-window
+            ;; display-buffer--maybe-top-panel
+            ;; display-buffer--maybe-bottom-panel
+            display-buffer--maybe-pop-up-window
+            display-buffer-use-some-window)
+           (side . top)
+           (dedicated . t)
+           (inhibit-same-window . t))
 
          '("^ ?\\*Treemacs-Buffer-"
            (display-buffer-reuse-window
@@ -1027,7 +1039,14 @@ _h_   _l_   _o_k        _y_ank
 (use-package transient
   :config
   (setq transient-show-during-minibuffer-read t
-        transient-mode-line-format 3))
+        transient-mode-line-format 3
+        ;; Note: `display-buffer-alist' takes precedence over this:
+        transient-display-buffer-action
+        '(display-buffer-in-side-window
+          (side . top)
+          (dedicated . t)
+          (inhibit-same-window . t))
+        ))
 
 (use-package magit
   :ensure t
