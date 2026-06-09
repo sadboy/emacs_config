@@ -1,3 +1,4 @@
+;; -*- lexical-binding: t; -*-
 (eval-when-compile
   (require 'cl-lib)
   (require 'use-package)
@@ -65,6 +66,10 @@
       ;; abbrev-file-name "~/emacs/abbrev_defs"
       save-abbrevs t
       vc-follow-symlinks t
+      vc-handled-backends '(Git Hg)
+
+      read-file-name-completion-ignore-case t
+      read-buffer-completion-ignore-case t
 
       ispell-process-directory (expand-file-name "~/")
       flyspell-issue-message-flag nil
@@ -72,18 +77,13 @@
 
       compilation-scroll-output 'first-error
 
-      ;; minimap-mode:
-      minimap-window-location 'right
-      minimap-automatically-delete-window nil
-
       ;; Dired-mode:
       dired-isearch-filenames 'dwim
 
-      ;; recentf-mode:
-      recentf-max-saved-items 50
-
       ;; tls verify:
       tls-checktrust t
+
+      browse-url-browser-function 'eww
       )
 (add-hook 'comint-output-filter-functions 'comint-truncate-buffer)
 
@@ -93,8 +93,10 @@
 (when (not (file-exists-p temporary-file-directory))
   (make-directory temporary-file-directory t))
 
-(if (fboundp 'tool-bar-mode)
-    (tool-bar-mode -1))
+(when (fboundp 'tool-bar-mode)
+  (tool-bar-mode -1))
+(when (fboundp 'delete-selection-mode)
+  (delete-selection-mode t))
 
 (put 'narrow-to-region 'disabled nil)
 (put 'dired-find-alternate-file 'disabled nil)
@@ -102,12 +104,13 @@
 
 (quietly-read-abbrev-file)
 (show-paren-mode t)
+(global-display-fill-column-indicator-mode t)
+(global-visual-line-mode t)
 
 ;; {{{ Global key bindings
 (global-set-key "\C-xQ" 'save-buffers-kill-emacs)
 (global-set-key (kbd "C-S-K") 'kill-current-buffer)
 (global-set-key (kbd "C-;") 'comment-or-uncomment-region)
-(global-set-key (kbd "C-S-S") 'window-toggle-side-windows)
 
 (global-set-key "\C-x\C-b" (lambda () (interactive) (ibuffer t nil nil nil t)))
 (global-set-key "\C-xg" 'rgrep)
@@ -253,10 +256,11 @@
   (:map Info-mode-map
         ("S-SPC" . Info-scroll-down))
   :config
-  (setq Info-directory-list nil
-        Info-default-directory-list
-        (cons (expand-file-name "~/.local/share/info/")
-              Info-default-directory-list))
+  ;; Note: This should now be managed by (package-initialize)
+  ;; (setq Info-directory-list nil
+  ;;       Info-default-directory-list
+  ;;       (cons (expand-file-name "~/.local/share/info/")
+  ;;             Info-default-directory-list))
   )
 (use-package whitespace
   :after (doom-themes)
@@ -269,25 +273,8 @@
   :config
   (setq uniquify-buffer-name-style 'post-forward-angle-brackets))
 (use-package ediff
-  :init
+  :preface
   (defvar my-ediff-map (make-sparse-keymap))
-  :bind-keymap
-  ("C-x e" . my-ediff-map)
-  :bind
-  (:map my-ediff-map
-        ("e" . kmacro-end-and-call-macro) ; Old binding for \C-xe
-        ("r" . ediff-revision)
-        ("b" . ediff-buffers)
-        ("f" . ediff-files)
-        ("B" . ediff-buffers3)
-        ("F" . ediff-files3)
-        ("=" . ediff-backup)
-        ("p" . ediff-patch-file)
-        ("u" . ediff-patch-buffer)
-        ("j" . dired-jump))
-  :config
-  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
-
   (defun my-ediff-max-frame () nil)
   (defun my-ediff-restore-frame() nil)
 
@@ -324,6 +311,23 @@
     (when my-ediff-bwin-config
       (set-window-configuration my-ediff-bwin-config)))
 
+  :bind-keymap
+  ("C-x e" . my-ediff-map)
+  :bind
+  (:map my-ediff-map
+        ("e" . kmacro-end-and-call-macro) ; Old binding for \C-xe
+        ("r" . ediff-revision)
+        ("b" . ediff-buffers)
+        ("f" . ediff-files)
+        ("B" . ediff-buffers3)
+        ("F" . ediff-files3)
+        ("=" . ediff-backup)
+        ("p" . ediff-patch-file)
+        ("u" . ediff-patch-buffer)
+        ("j" . dired-jump))
+  :config
+  (setq ediff-window-setup-function 'ediff-setup-windows-plain)
+
   (add-hook 'ediff-before-setup-hook 'my-ediff-bsh)
   (add-hook 'ediff-after-setup-windows-hook 'my-ediff-ash 'append)
   (add-hook 'ediff-quit-hook 'my-ediff-qh 'append)
@@ -350,7 +354,7 @@
   :bind
   (:map dired-mode-map
         ("C-x N" . dired-narrow)
-        ("F" . dired-narrow)
+        ("F" . dired-narrow-fuzzy)
         ("N" . dired-narrow))
   :hook
   (dired-mode . dired-narrow-mode))
