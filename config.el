@@ -361,13 +361,85 @@
 
 (use-package multiple-cursors
   :ensure t
+  :preface
+  (defun my/mc/mark-all-in-region-regexp (beg end regexp)
+    "Find and mark all the parts in the region matching the given regexp."
+    (if (string= regexp "")
+        (message "Mark aborted")
+      (progn
+        (mc/remove-fake-cursors)
+        (goto-char beg)
+        (let ((lastmatch))
+          (while (and (< (point) end) ; can happen because of (forward-char)
+                      (search-forward-regexp regexp end t))
+            (push-mark (match-beginning 0))
+            (mc/create-fake-cursor-at-point)
+            (setq lastmatch (point))
+            (when (= (point) (match-beginning 0))
+              (forward-char)))
+          (unless lastmatch
+            (error "Search failed for %S" regexp)))
+        (goto-char (match-end 0))
+        (if (< (mc/num-cursors) 3)
+            (mc/disable-multiple-cursors-mode)
+          (mc/pop-state-from-overlay (mc/furthest-cursor-before-point))
+          (multiple-cursors-mode 1)))))
+
+  (cl-defun my/mc/cycle-delete (next-cursor fallback-cursor loop-message)
+    (when (null next-cursor)
+      (when (eql 'stop (mc/handle-loop-condition loop-message))
+        (cond
+         ((fboundp 'cl-return-from)
+          (cl-return-from mc/cycle nil))
+         ((fboundp 'return-from)
+          (cl-return-from mc/cycle nil))))
+      (setf next-cursor fallback-cursor))
+    (mc/pop-state-from-overlay next-cursor)
+    (recenter))
+
+  (defun my/mc/unmark-forward ()
+    (interactive)
+    (my/mc/cycle-delete (mc/next-fake-cursor-after-point)
+                        (mc/first-fake-cursor-after (point-min))
+                        "We're already at the last cursor."))
+
+  (defun my/mc/unmark-backward ()
+    (interactive)
+    (my/mc/cycle-delete (mc/prev-fake-cursor-before-point)
+                        (mc/last-fake-cursor-before (point-max))
+                        "We're already at the last cursor"))
+
+  :hook
+  (multiple-cursors-mode-disabled
+   . (lambda ()
+       ;; Make sure `transient-mark-mode' is disabled whenever we get out of
+       ;; `multiple-cursors-mode' -- mc sometimes has a knack for leaving this
+       ;; enabled for whatever reason:
+       (transient-mark-mode -1))
+   )
+
   :bind
-  ("C-S-<mouse-1>" . mc/add-cursor-on-click)
-  ("M-N" . mc/mark-next-like-this)
-  ("M-P" . mc/mark-previous-like-this)
+  (("C-S-<mouse-1>" . mc/add-cursor-on-click)
+   ("M-N" . mc/mark-next-like-this-symbol)
+   ("M-P" . mc/mark-previous-like-this-symbol)
+   ;; ("C-S-l" . mc/mark-all-like-this-dwim)
+   :map mc/keymap
+   ("C-S-v" . my/mc/unmark-forward)
+   ("M-S-v" . my/mc/unmark-backward)
+   :map isearch-mode-map
+   ("C-S-l" . (lambda ()
+                (interactive)
+                (basic/action-from-isearch
+                 (lambda (query)
+                   (my/mc/mark-all-in-region-regexp
+                    (point-min) (point-max) query)))))
+   )
   :config
   ;; (setq mc/list-file "~/.emacs.d/mc.list.el")
   ;; mc/always-run-for-all t
+  ;; (setq mc/cursor-specific-vars
+  ;;       (remove 'transient-mark-mode mc/cursor-specific-vars))
+  (setq mc/match-cursor-style nil)
   )
 
 (use-package avy
@@ -379,125 +451,271 @@
   (:map isearch-mode-map
         ("C-'" . avy-isearch)))
 
-(use-package ivy
-  :straight t
-  :init
-  (ivy-mode t)
-  :config
-  (setq ivy-re-builders-alist
-        '((swiper . ivy--regex)
-          (counsel-rg . ivy--regex)
-          (t . ivy--regex-fuzzy)))
-  (setq ivy-use-virtual-buffers t)
-  (setq enable-recursive-minibuffers t)
-  (setq ivy-height 25)
-  :bind
-  (:map ivy-minibuffer-map
-        ("RET" . ivy-alt-done)
-        ("C-M-m" . ivy-call-and-recenter))
-  (:map ctrl-x-comma-map
-        ("," . ivy-resume)
-        ("r" . ivy-resume)))
-(use-package counsel
-  :straight t
-  :bind
-  ("M-x" . counsel-M-x)
-  ("M-y" . counsel-yank-pop)
-  ("C-h f" . counsel-describe-function)
-  ("C-h v" . counsel-describe-variable)
-  ("C-c i" . counsel-semantic-or-imenu)
-  (:map ctrl-x-f-map
-        ("g" . counsel-rg))
-  (:map ctrl-x-comma-map
-        ("SPC" . counsel-mark-ring)
-        ("y" . counsel-yank-pop))
-  ;; (:map minibuffer-local-map
-  ;;       ("C-r" . counsel-minibuffer-history))
-  :config
-  (assoc-delete-all 'counsel-yank-pop ivy-height-alist)
+;; Here is a modern Vertico, Orderless, Marginalia, and Consult (often called the "McClim" or "Minad" stack) configuration that mimics your Ivy/Counsel/Swiper setup.
+;; ### Key Differences & Equivalents:
+;; * **`ivy-mode`** $\rightarrow$ **`vertico-mode`**
+;; * **`ivy-rich`** $\rightarrow$ **`marginalia-mode`** (provides rich metadata next to commands/files).
+;; * **`swiper`** $\rightarrow$ **`consult-line`** (performs live buffer searching; automatically picks up active isearch queries).
+;; * **`counsel-rg`** $\rightarrow$ **`consult-ripgrep`**.
+;; * **`ivy-call` / `ivy-hydra`** $\rightarrow$ **`embark-act`** (bound to `C-M-m` to perform context-aware actions on candidates without closing the minibuffer).
 
-  (use-package isearch
-    :config
-    (defun do-rg-from-isearch ()
-      "Invoke `counsel-rg' from isearch."
-      (interactive)
-      (let ((query (if isearch-regexp
-                       isearch-string
-                     (if (or (eq isearch-regexp-function 'isearch-symbol-regexp)
-                             (eq isearch-regexp-function 'word-search-regexp))
-                         (format "\\b%s\\b" (regexp-quote isearch-string))
-                       (regexp-quote isearch-string)))))
-        (isearch-exit)
-        (counsel-rg query)))
-    :bind
-    (:map isearch-mode-map
-          ("M-o" . do-rg-from-isearch))
-    )
-  )
-;; (use-package counsel-projectile
-;;   :straight t
-;;   :config
-;;   (setq counsel-projectile-rg-initial-input '(projectile-symbol-or-selection-at-point)))
+;; Recursive minibuffers (mimics Ivy setting)
+(setq enable-recursive-minibuffers t)
 
-(use-package swiper
-  :straight t
-  :bind
-  (:map isearch-mode-map
-        ("C-o" . swiper-from-isearch))
-  :config
-
-  (defun swiper--fix-from-isearch ()
-    "Invoke `swiper' from isearch."
-    (interactive)
-    (let ((query (if isearch-regexp
-                     isearch-string
-                   (if isearch-regexp-function
-                       (funcall isearch-regexp-function isearch-string)
-                     (regexp-quote isearch-string)))))
-      (isearch-exit)
-      (swiper query)))
-  (advice-add 'swiper-from-isearch :override 'swiper--fix-from-isearch)
-
-  (global-set-key (kbd "M-s M-o") 'swiper-thing-at-point)
-  (use-package multiple-cursors
-    :config
-    (cl-pushnew 'swiper-mc mc--default-cmds-to-run-once)
-    )
-  )
-(use-package ivy-rich
-  :straight t
+;; 1. VERTICO: The completion UI (mimics ivy-mode)
+(use-package vertico
   :ensure t
-  :after (ivy counsel)
+  :init
+  (vertico-mode 1)
+  (vertico-multiform-mode t)
   :config
-  (setq ivy-rich-parse-remote-buffer nil)
-  (setq ivy-rich-parse-remote-file-path nil)
-  (setq ivy-rich-path-style 'abbrev)
-  (ivy-rich-mode t))
+  (setq vertico-count 25) ; Mimics ivy-height
+  :bind (:map vertico-map
+              ("RET" . vertico-directory-enter) ; Mimics ivy-alt-done for directories
+              ("DEL" . vertico-directory-delete-char)))
+(use-package vertico-posframe
+  :ensure t
+  :after vertico
+  :config
+  (setq vertico-posframe-border-width 6
+        vertico-posframe-poshandler 'posframe-poshandler-frame-top-center
+        vertico-posframe-parameters '((left-fringe . 8) (right-fringe . 8)))
+  (setq vertico-multiform-commands
+        '(
+          ;; (consult-imenu (:not posframe))
+          (consult-yank-pop (:not posframe))
+          ;; (consult-mark (:not posframe))
+          (t posframe
+             ;; NOTE: This is useful when emacs is used in both in X and
+             ;; terminal, for posframe do not work well in terminal, so
+             ;; vertico-buffer-mode will be used as fallback at the
+             ;; moment.
+             (vertico-posframe-fallback-mode . vertico-buffer-mode))))
+  ;; Automatically enabled by vertico-multiform-mode for commands in
+  ;; vertico-multiform-commands, so no need to enable globally:
+  ;; (vertico-posframe-mode 1)
+)
 
-(use-package company
-  ;; :straight t
-  :straight (company :type git
-                     :host github
-                     :repo "sadboy/company-mode"
-                     :branch "own-master")
-  :bind
-  ("M-/" . company-other-backend)
+;; 2. ORDERLESS: Completion style (mimics ivy-re-builders-alist)
+(use-package orderless
+  :ensure t
   :config
-  (setq company-idle-delay nil
-        company-tooltip-align-annotations t
-        company-show-numbers t
-        company-require-match nil
-        company-auto-commit t
-        company-tooltip-idle-delay .2
-        company-dabbrev-char-regexp "[[:word:]-_]"
-        company-dabbrev-ignore-case t
-        company-dabbrev-downcase nil
-        company-dabbrev-code-ignore-case t
-        company-dabbrev-code-other-buffers 'all
-        company-dabbrev-code-everywhere t
-        company-dabbrev-time-limit .2
-        company-dabbrev-code-time-limit .2)
-  (global-company-mode t))
+  (setq completion-styles '(orderless basic)
+        completion-ignore-case t
+        completion-category-defaults nil
+        ;; orderless-component-separator #'ignore
+        completion-category-overrides '((file (styles partial-completion))))
+  (setq read-file-name-completion-ignore-case t)
+  (setq read-buffer-completion-ignore-case t)
+  )
+(use-package hotfuzz
+  :ensure t
+  :config
+  (setq completion-styles '(hotfuzz orderless basic)
+        ;; completion-ignore-case t
+        ;; hotfuzz-max-needle-len 5
+        ;; hotfuzz-max-highlighted-completions 10
+        ))
+
+;; 3. MARGINALIA: Rich annotations in minibuffer (mimics ivy-rich)
+(use-package marginalia
+  :ensure t
+  :init
+  (marginalia-mode 1))
+
+(use-package consult-eglot)
+;; 4. CONSULT: Search & Navigation (mimics counsel & swiper)
+(use-package consult
+  :ensure t
+  :bind
+  (("C-x b" . consult-buffer)
+   ("M-y" . consult-yank-pop)
+   ("C-c o" . consult-outline)
+   ("C-c i" . consult-imenu)
+   ("C-c C-I" . consult-eglot-symbols)
+
+   ;; M-g bindings in `goto-map'
+   ("M-g e" . consult-compile-error)
+   ("M-g r" . consult-grep-match)
+   ("M-g f" . consult-flymake)               ;; Alternative: consult-flycheck
+   ("M-g g" . consult-goto-line)             ;; orig. goto-line
+   ("M-g M-g" . consult-goto-line)           ;; orig. goto-line
+   ("M-g o" . consult-outline)               ;; Alternative: consult-org-heading
+   ("M-g M-SPC" . consult-mark)
+   ("M-g k" . consult-global-mark)
+   ("M-g i" . consult-imenu)
+   ("M-g I" . consult-imenu-multi)
+
+   ;; M-s bindings in `search-map'
+   ("M-s d" . consult-find)                  ;; Alternative: consult-fd
+   ("M-s c" . consult-locate)
+   ("M-s g" . consult-grep)
+   ("M-s G" . consult-git-grep)
+   ("M-s r" . consult-ripgrep)
+   ("M-s l" . consult-line)
+   ("M-s L" . consult-line-multi)
+   ("M-s k" . consult-keep-lines)
+   ("M-s u" . consult-focus-lines)
+   ("M-s M-o" . consult-line-thing-at-point)
+
+   ;; Isearch integration
+   ("M-s e" . consult-isearch-history)
+   :map isearch-mode-map
+   ("M-e" . consult-isearch-history)         ;; orig. isearch-edit-string
+   ("M-s e" . consult-isearch-history)       ;; orig. isearch-edit-string
+   ("M-s l" . consult-line)                  ;; needed by consult-line to detect isearch
+   ("M-s L" . consult-line-multi)            ;; needed by consult-line to detect isearch
+   ("C-o" . my/do-consult-line-from-isearch)
+   ("C-S-o" . my/do-consult-line-multi-from-isearch)
+   ("M-o" . my/do-consult-rg-from-isearch)
+
+   ;; Minibuffer history
+   :map minibuffer-local-map
+   ("M-s" . consult-history)                 ;; orig. next-matching-history-element
+   ("M-r" . consult-history)                 ;; orig. previous-matching-history-element
+   ;; Keymaps mimicking your custom bindings
+
+   :map ctrl-x-f-map
+   ("g" . consult-ripgrep)
+
+   :map ctrl-x-comma-map
+   ("," . vertico-repeat)                 ; ivy-resume
+   ("r" . vertico-repeat)
+   ("SPC" . consult-mark)
+   ("y" . consult-yank-pop))
+
+  :preface
+  (defun my/do-consult-rg-from-isearch ()
+    "Invoke `consult-ripgrep' from isearch."
+    (interactive)
+    (basic/action-from-isearch (lambda (query)
+                                (consult-ripgrep nil query))))
+
+  (defun my/do-consult-line-from-isearch ()
+    "Invoke `consult-ripgrep' from isearch."
+    (interactive)
+    (basic/action-from-isearch 'consult-line))
+  (defun my/do-consult-line-multi-from-isearch ()
+    "Invoke `consult-ripgrep' from isearch."
+    (interactive)
+    (basic/action-from-isearch (lambda (query)
+                                 (consult-line-multi nil query))))
+
+  (defun consult-line-thing-at-point ()
+    "Search for the symbol at point using `consult-line'."
+    (interactive)
+    (consult-line (thing-at-point 'symbol t)))
+
+  :config
+  ;; Use Consult to select xref targets (e.g., multi-matches)
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref)
+  (consult-customize
+   consult-buffer consult-theme :preview-key '(:debounce 0.2 any)
+   consult-ripgrep consult-git-grep consult-grep consult-man
+   consult-bookmark consult-recent-file consult-xref
+   consult-source-bookmark consult-source-file-register
+   consult-source-recent-file consult-source-project-recent-file
+   ;; :preview-key "M-."
+   :preview-key '(:debounce 0.4 any))
+  )
+(use-package consult-xref-stack
+  :vc
+  (:url "https://github.com/brett-lempereur/consult-xref-stack" :branch "main")
+  :bind
+  (("M-g ," . consult-xref-stack-backward)
+   ("M-g ." . consult-xref-stack-forward))
+  )
+
+;; 5. EMBARK: Actions and Hydras (mimics ivy-call and ivy-hydra)
+(use-package embark
+  :ensure t
+  :bind
+  (
+   ;; ("C-M-m" . embark-act)                     ; Mimics ivy-call-and-recenter
+   ;; ("C-." . embark-dwim)                     ; Context-aware action
+   ("C-h B" . embark-bindings)              ; Alternative to describe-bindings
+   :map vertico-map
+   ("C-.". embark-act)
+   :map isearch-mode-map                ; Make it available in isearch
+   ("C-.". embark-act)
+   )
+  :init
+  (setq prefix-help-command #'embark-prefix-help-command))
+
+(use-package embark-consult
+  :ensure t
+  :after (embark consult))
+
+(use-package vundo
+  :ensure t
+  :bind
+  (("C-c /" . vundo))
+  :config
+  (setq vundo-glyph-alist vundo-unicode-symbols
+        vundo-window-side 'top))
+
+;; (use-package company
+;;   :ensure t
+;;   :bind
+;;   ("M-/" . company-other-backend)
+;;   :config
+;;   (setq company-idle-delay nil
+;;         company-tooltip-align-annotations t
+;;         company-show-numbers t
+;;         company-require-match nil
+;;         company-auto-commit t
+;;         company-tooltip-idle-delay .2
+;;         company-dabbrev-char-regexp "[[:word:]-_]"
+;;         company-dabbrev-ignore-case t
+;;         company-dabbrev-downcase nil
+;;         company-dabbrev-code-ignore-case t
+;;         company-dabbrev-code-other-buffers 'all
+;;         company-dabbrev-code-everywhere t
+;;         company-dabbrev-time-limit .2
+;;         company-dabbrev-code-time-limit .2)
+;;   (global-company-mode t))
+
+
+;; Here is the equivalent setup using **Corfu** and **Cape** (which provides the
+;; Dabbrev backend and Capf extensions).
+
+;; ### Key Mapping Notes:
+;; 1. **`company-idle-delay nil`**: Mapped to `(corfu-auto nil)`. Completion is manually triggered via `M-/` (`completion-at-point`).
+;; 2. **`company-show-numbers`**: Achieved by enabling the built-in `corfu-indexed-mode`.
+;; 3. **Dabbrev settings**: Corfu uses Emacs's native `dabbrev` library under the hood (via `cape-dabbrev`), so `company-dabbrev-*` variables are mapped to their native Emacs `dabbrev-*` equivalents.
+
+(use-package corfu
+  :ensure t
+  :bind
+  ("M-/" . completion-at-point)    ; Manual completion trigger
+  :init
+  (global-corfu-mode t)
+  :config
+  (setq corfu-auto nil)                 ; company-idle-delay nil (manual trigger)
+  (setq corfu-align-annotations t)      ; company-tooltip-align-annotations t
+  (setq corfu-preview-current t)        ; Help with auto-commit behavior
+  (setq corfu-quit-no-match nil)
+  (setq corfu-border-width 3)
+  ;; Enable corfu-indexed to show numbers (company-show-numbers)
+  (corfu-indexed-mode t)
+)
+
+;; Emacs built-in dabbrev configuration (used by Cape/Corfu)
+(use-package dabbrev
+  :custom
+  (dabbrev-case-fold-search t)      ; company-dabbrev-ignore-case t
+  (dabbrev-case-replace nil)        ; company-dabbrev-downcase nil
+  (dabbrev-check-other-buffers t)   ; company-dabbrev-code-other-buffers 'all
+  (dabbrev-friend-buffer-function (lambda (buf) t)) ; Search all buffers
+  )
+
+;; Cape provides the Dabbrev Capf and other backends
+(use-package cape
+  :ensure t
+  :init
+  ;; Add dabbrev to the default completion-at-point-functions
+  (add-to-list 'completion-at-point-functions #'cape-dabbrev))
 
 (use-package ace-window
   :ensure t)
@@ -511,6 +729,13 @@
 (use-package rotate
   :ensure t)
 
+(use-package hydra
+  :ensure t
+  :config
+  (setq hydra-is-helpful t
+        hydra-hint-display-type 'posframe)
+  )
+
 (use-package basic
   :after hydra
   :demand t
@@ -518,7 +743,7 @@
   :config
   (setq display-buffer-alist
         (list
-         '("^\\*scratch.*\\*"
+         '("^\\*scratch.*\\*\\|^COMMIT_EDITMSG$"
            (display-buffer-reuse-window
             display-buffer-same-window))
 
@@ -574,7 +799,9 @@
     ("<up>" hydra-move-splitter-up)
     ("<right>" hydra-move-splitter-right)
     ("-" shrink-window-if-larger-than-buffer)
-    ("=" balance-windows)
+    ("=" (lambda () (interactive)
+           (balance-windows (window-main-window))))
+
     ("[" (lambda () (interactive) (scroll-left 8)))
     ("]" (lambda () (interactive) (scroll-right 8)))
     ("C--" text-scale-decrease)
@@ -584,9 +811,8 @@
     ("w" rotate-layout)
 
     ("F" follow-mode)
-    ("b" ivy-switch-buffer)
-    ("M-k" kill-current-buffer)
-    ("f" counsel-find-file)
+    ("b" pop-to-buffer)
+    ("f" consult-find)
     ("<" previous-buffer)
     (">" next-buffer)
 
@@ -628,7 +854,6 @@
            (winner-undo)
            (setq this-command 'winner-undo))
      )
-    ("y" winner-redo)
     ("?" winner-redo)
     )
 
@@ -646,6 +871,7 @@
     "
   ^_k_^     _d_elete    s_t_ring
 _h_   _l_   _o_k        _y_ank
+
   ^_j_^     ne_w_-copy  _r_eset
 ^^^^        _e_xchange  _u_ndo
 ^^^^        _q_uit      _x_kill
@@ -737,13 +963,35 @@ _h_   _l_   _o_k        _y_ank
 (use-package w3m
   :ensure t
   :bind
-  ("C-x W" . w3m))
+  (("C-x W" . w3m)))
 
-(use-package eat
+(use-package vterm
   :ensure t
   :bind
-  ("C-S-t" . eat)
-  )
+  (("C-S-t" . vterm-other-window)
+   :map project-prefix-map
+   ("t" . project-vterm))
+
+  :preface
+  (defun project-vterm ()
+    (interactive)
+    (defvar vterm-buffer-name)
+    (let* ((default-directory (project-root (project-current t)))
+           (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
+           (vterm-buffer (get-buffer vterm-buffer-name)))
+      (if (and vterm-buffer (not current-prefix-arg))
+          (pop-to-buffer vterm-buffer
+                         (bound-and-true-p display-comint-buffer-action))
+        (vterm))))
+
+  :init
+  (add-to-list 'project-switch-commands     '(project-vterm "Vterm") t)
+  (add-to-list 'project-kill-buffer-conditions  '(major-mode . vterm-mode))
+  :config
+  (setq vterm-copy-exclude-prompt t)
+  (setq vterm-max-scrollback 100000)
+  (setq vterm-tramp-shells '(("ssh" "/usr/bin/bash")
+                             ("podman" "/bin/bash"))))
 
 (use-package wgrep
   :ensure t
@@ -754,16 +1002,32 @@ _h_   _l_   _o_k        _y_ank
   :ensure t
   :bind
   (:map ctrl-x-comma-map
-        ("t" . treemacs)))
+        ("t" . treemacs))
+  :config
+  (treemacs-project-follow-mode t)
+  )
 
 (use-package minimap
   :ensure t
+  :config
+  (setq
+   minimap-window-location 'right
+   minimap-automatically-delete-window 'visible)
   :bind
-  ("M-S-m" . minimap-mode))
+  ("M-M" . minimap-mode))
 
 (use-package all-the-icons :ensure t)
-(use-package all-the-icons-ivy :ensure t)
 (use-package all-the-icons-gnus :ensure t)
+
+(use-package solaire-mode
+  :ensure t
+  :config
+  (solaire-global-mode t))
+
+(use-package transient
+  :config
+  (setq transient-show-during-minibuffer-read t
+        transient-mode-line-format 3))
 
 (use-package magit
   :ensure t
@@ -774,6 +1038,9 @@ _h_   _l_   _o_k        _y_ank
 (use-package org
   :ensure t
   :config
+  (keymap-unset org-mode-map "S-RET") ; Unshadow toggle bottom pane
+
+  (visual-line-mode t)
   (use-package ox-md)
   (setq org-latex-listings 'minted
         org-special-ctrl-a/e t
@@ -782,7 +1049,7 @@ _h_   _l_   _o_k        _y_ank
   (setq org-hide-emphasis-markers t
         org-startup-indented t
         ;; org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
-        org-ellipsis "  " ;; folding symbol
+        org-ellipsis " ↴" ; Down arrow with corner
         org-pretty-entities t
         org-hide-emphasis-markers t
         ;; show actually italicized text instead of /italicized text/
@@ -790,10 +1057,21 @@ _h_   _l_   _o_k        _y_ank
         org-fontify-whole-heading-line t
         org-fontify-done-headline t
         org-fontify-quote-and-verse-blocks t)
-  (font-lock-add-keywords
-   'org-mode
-   '(("^ +\\([-*]\\) "
-      (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•")))))))
+  ;; (font-lock-add-keywords
+  ;;  'org-mode
+  ;;  '(("^ +\\([-*]\\) "
+  ;;     (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
+)
+
+(use-package org-roam
+  :config
+  (setq org-roam-directory (file-truename "~/Notes/roam"))
+  (org-roam-db-autosync-mode t)
+  (setq org-roam-dailies-directory "daily/")
+  (setq org-roam-dailies-capture-templates
+        `(("d" "default" entry
+           "* %?"
+           :if-new (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n\n")))))
 
 (use-package org-bullets
   :ensure t
@@ -807,17 +1085,21 @@ _h_   _l_   _o_k        _y_ank
   :bind
   (:map markdown-mode-map
         ("C-c C-v" . markdown-preview))
-)
+  )
 
 (use-package which-key
   :init
   (which-key-mode t))
 
 (use-package eglot
+  :after tree-sitter
   :bind
   (:map eglot-mode-map
         ("C-." . eglot-code-actions)
+        ;; ("C-X" . eglot-momentary-inlay-hints)
+        ("C-:" . eglot-inlay-hints-mode)
         ("M-R" . xref-find-references)
+        ("M-I" . eglot-find-implementation)
         ("M-?" . eldoc-doc-buffer)
         ("M-g M-r" . eglot-rename)
         ("M-g M-f" . eglot-format)
@@ -826,9 +1108,50 @@ _h_   _l_   _o_k        _y_ank
         ("C-c C-m" . flymake-show-project-diagnostics)
         )
   :config
+  (remove-hook 'rust-mode-hook #'tree-sitter-hl-mode)
+
+  (setq-default eglot-workspace-configuration
+                '(:rust-analyzer
+                  (:cargo (:targetDir "target/rust-analyzer"))))
   (setq eglot-autoshutdown t)
+  (setq eglot-connect-timeout 300)
+  ;; Use a pipe, not a pty, for communication with the language server. This can
+  ;; help with performance and stability:
+  (setq process-connection-type nil)
   ;; (setq eglot-extend-to-xref t)
+  (setq eglot-code-action-indications '(eldoc-hint))
   )
+
+(use-package imenu
+  :config
+  (setq imenu-flatten 'annotation))
+
+(use-package imenu-list
+  :bind
+  (:map ctrl-x-comma-map
+        ("o" . imenu-list-smart-toggle))
+  :config
+  ;; Remove the imenu-installed entry from `display-buffer-alist', as we don't
+  ;; want it to mess with our panel layout:
+  (setq display-buffer-alist
+        (cl-delete 'imenu-list-display-buffer display-buffer-alist
+                   :key #'cadr :test #'equal))
+
+  (setq imenu-list-focus-after-activation t)
+  ;; (setq imenu-list-size 0.25)
+  ;; (setq imenu-list-position 'right)
+  ;; (setq imenu-list-auto-resize t)
+  )
+(use-package breadcrumb
+  :config
+  ;; Turn it on globally for the headerline
+  (breadcrumb-mode 1))
+
+(use-package jarchive
+  :ensure t
+  :after eglot
+  :config
+  (jarchive-setup))
 
 (use-package copilot
   :ensure t
@@ -837,15 +1160,15 @@ _h_   _l_   _o_k        _y_ank
   :hook (prog-mode . copilot-mode)
   :config
   (setq
-        copilot-indent-offset-warning-disable t)
+   copilot-indent-offset-warning-disable t)
   (defun copilot-action-with-fallback (action &optional fallback)
     `(lambda ()
-      (interactive)
-      (if (copilot--overlay-visible)
-          (call-interactively ',action)
-        (when (commandp ',fallback)
-          (call-interactively ',fallback)))
-    ))
+       (interactive)
+       (if (copilot--overlay-visible)
+           (call-interactively ',action)
+         (when (commandp ',fallback)
+           (call-interactively ',fallback)))
+       ))
 
   (define-key copilot-mode-map (kbd "<tab>")
               (copilot-action-with-fallback
@@ -866,30 +1189,38 @@ _h_   _l_   _o_k        _y_ank
 (use-package gptel
   :ensure t
   :config
-  (setq gptel-backend (gptel-make-gemini "Gemini" :key (lambda () (getenv "GEMINI_TOKEN")) :stream t))
-  (setq gptel-model 'gemini-2.0-flash)
+  (setq my/gptel/gemini-backend
+        (gptel-make-gemini "Gemini"
+          ;; :key (lambda () (getenv "GEMINI_API_KEY")) ; Evaluated at runtime
+          :key (gptel-api-key-from-auth-source "api.google.com")
+          :stream t
+          :models '(gemini-flash-latest
+                    gemini-3.5-flash gemini-3.1-flash-lite)))
+  (setq my/gptel/qwen-local-backend
+        (gptel-make-openai "vllm-local"
+          :host "athena:8888"
+          :protocol "http"
+          :key "nokey"
+          :models '(qwen3.6)))
+  (setq gptel-backend my/gptel/gemini-backend
+        gptel-model 'gemini-3.5-flash)
+  (setq gptel-default-mode 'org-mode)
+
   :bind
-  ("C-c g ?" . gptel-ask)
-  ("C-c g g" . gptel-send)
+  (("s-?" . gptel-menu)
+   ("s-i" . gptel)
+   :map gptel-mode-map
+   ("s-<return>" . gptel-send))
  )
 
-(use-package dap-mode
-  :ensure t)
+;; (use-package dap-mode
+;;   :ensure t)
 
 (use-package dash-docs
   :ensure t
   :config
   (setq dash-docs-common-docsets '("Python 3"))
   )
-
-;; (use-package lsp-python-ms
-;;   :ensure t
-;;   :config
-;;   (require 'lsp-python-ms)
-;;   )
-
-;; (use-package lsp-pyright
-;;   :ensure t)
 
 ;; Tree sitter is native in Emacs 29
 (use-package tree-sitter
@@ -1046,16 +1377,14 @@ current buffer.
         ("M-?" . describe-symbol)
         ("M-R" . xref-find-references)
         )
-  :config
-  ;; (setq lisp-indent-function 'common-lisp-indent-function)
+  :preface
   (defun my-emacs-lisp-mode-hook ()
-    (make-local-variable 'company-backends)
-    (setq company-backends
-          '(company-capf company-files company-dabbrev-code company-dabbrev))
     (make-local-variable 'parens-require-spaces)
     (local-set-key "\C-xiu" (lambda () (interactive) (insert ";;;###autoload")))
     (setq parens-require-spaces t
           tab-width 8))
+  :config
+  ;; (setq lisp-indent-function 'common-lisp-indent-function)
   (add-hook 'emacs-lisp-mode-hook 'my-emacs-lisp-mode-hook)
   )
 
@@ -1067,7 +1396,7 @@ current buffer.
   (:map c++-mode-map
         ("C-c C-c" . compile))
 
-  :config
+  :preface
   (defun my-c-common-hook ()
     (c-set-style "stroustrup")
     (c-set-offset 'statement-case-open '+)
@@ -1077,7 +1406,6 @@ current buffer.
           indent-tabs-mode nil
           indicate-empty-lines t
           hs-isearch-open nil)
-    (setq company-backends '(company-capf company-dabbrev-code company-dabbrev))
 
     (let ((output-name (if buffer-file-name
                            (shell-quote-argument
@@ -1094,28 +1422,27 @@ current buffer.
   (defun my-cpp-hook ()
     (subword-mode t))
 
+  :config
   (add-hook 'c-mode-common-hook 'my-c-common-hook)
   (add-hook 'c++-mode-hook 'my-cpp-hook))
 
 (use-package python
   :mode
   ("/TARGETS\\'" . python-mode)
-  :config
-  (setq python-indent-offset 4)
 
+  :preface
   (defun my-python-mode-hook ()
     (setq python-skeleton-autoinsert nil)
-    (kill-local-variable 'completion-at-point-functions)
-    (make-local-variable 'company-backends)
-    (setq company-backends '(company-capf company-dabbrev-code company-dabbrev))
-    (subword-mode t)
-    )
-  (add-hook 'python-mode-hook 'my-python-mode-hook)
+    (subword-mode t))
 
+  :config
   (defhydra hydra-python (python-mode-map "C-c")
     "Shift indentation"
     ("<" python-indent-shift-left)
     (">" python-indent-shift-right))
+
+  (setq python-indent-offset 4)
+  (add-hook 'python-mode-hook 'my-python-mode-hook)
   )
 
 (use-package antlr-mode
@@ -1172,18 +1499,16 @@ current buffer.
   ("\\.thrift\\'" . thrift-mode))
 
 (use-package text-mode
-  :config
+  :preface
   (defun my-text-mode-hook ()
-    (auto-fill-mode 1)
+    ;; (auto-fill-mode 1)
     (flyspell-mode 1)
     (setq require-final-newline nil)
     (modify-syntax-entry ?' ".")
-    (make-local-variable 'company-backends)
-    (setq company-backends
-          (if (fboundp 'company-math-symbols-unicode)
-              '(company-dabbrev-code company-dabbrev
-                                     company-math-symbols-unicode)
-            '(company-dabbrev-code company-dabbrev))))
+    ;; (setq completion-at-point-functions
+    ;;       (append '(cape-dabbrev) completion-at-point-functions))
+    )
+  :config
   (add-hook 'text-mode-hook 'my-text-mode-hook)
   )
 
@@ -1221,14 +1546,6 @@ current buffer.
 
   ;; Corrects (and improves) org-mode's native fontification.
   (doom-themes-org-config)
-
-  ;; Fixup company popup
-  (use-package company
-    :config
-  ;; (set-face-background 'company-tooltip "dim gray")
-  ;; (set-face-foreground 'company-tooltip "dark gray")
-  ;; (set-face-background 'company-tooltip-selection "light blue")
-    (set-face-background 'company-scrollbar-bg "wheat"))
 
   ;; Fixup isearch highlighting
   (set-face-bold 'lazy-highlight nil)
