@@ -129,33 +129,6 @@ mark behind."
 
 ;; {{{ really-toggle-read-only
 
-(defun basic--is-sudo (filename)
-  (and (tramp-tramp-file-p filename)
-       (with-parsed-tramp-file-name filename fn
-         (and (string= "sudo" fn-method)
-              (string= "root" fn-user)
-              fn-localname))))
-
-(defun basic--toggle-buffer-to-name (target)
-  (let ((oldbuf (current-buffer))
-        (currentpoint (point))
-        (bufname (buffer-name))
-        (hasclients (and (boundp 'server-buffer-clients)
-                         server-buffer-clients))
-        (newbuf (find-file-noselect target)))
-    (rename-buffer (concat bufname ".toggle") t)
-    (with-current-buffer newbuf
-      (rename-buffer bufname)
-      (goto-char currentpoint)
-      (and buffer-read-only
-           view-read-only
-           (view-mode t)))
-    (switch-to-buffer newbuf)
-    (recenter)
-    (unless hasclients
-      (kill-buffer oldbuf))
-    (message "Toggled to new filename: %s" target)))
-
 ;;;###autoload
 (defun really-toggle-read-only ()
   "Change whether this buffer is visiting its file read-only by really
@@ -164,39 +137,19 @@ trying to acquire the rights with sudo (and tramp)"
   (cond
    ((buffer-modified-p)
     ;; Buffer has pending changes, so don't do anything special:
-    (call-interactively 'read-only-mode))
-
-   ((basic--is-sudo (buffer-file-name))
-    ;; We're in a "sudo:root" buffer, so toggle it off:
-    (let ((tramp-name (tramp-dissect-file-name (buffer-file-name))))
-      (basic--toggle-buffer-to-name (tramp-file-name-localname tramp-name))))
+    (read-only-mode 'toggle))
 
    ((file-writable-p (buffer-file-name))
     ;; We have write permission to this file, so just go through the regular
     ;; `toggle-read-only':
-    (call-interactively 'read-only-mode))
+    (read-only-mode 'toggle))
 
-   (t
+   (buffer-read-only
     ;; Otherwise, we must add a "sudo" hop:
-    (let* ((currentfilename (buffer-file-name))
-           (host (if (tramp-tramp-file-p currentfilename)
-                     (with-parsed-tramp-file-name currentfilename fn
-                       fn-host)
-                   "localhost"))
-           (tramp-name (make-tramp-file-name
-                        :method "sudo"
-                        :user "root"
-                        :host host
-                        :localname currentfilename)))
-      (basic--toggle-buffer-to-name
-       (tramp-make-tramp-file-name
-        (tramp-file-name-method tramp-name)
-        (tramp-file-name-user tramp-name)
-        (tramp-file-name-domain tramp-name)
-        (tramp-file-name-host tramp-name)
-        (tramp-file-name-port tramp-name)
-        (tramp-file-name-localname tramp-name)
-        (tramp-file-name-hop tramp-name)))))))
+    (call-interactively 'tramp-revert-buffer-with-sudo))
+
+  (t
+   (read-only-mode 'toggle))))
 
 ;; }}}
 
@@ -643,65 +596,6 @@ or not enough space to restore it" side))))
 (define-key my-window-control-map "<" 'scroll-left)
 (define-key my-window-control-map ">" 'scroll-right)
 
-;; }}}
-
-;; {{{ Buffer Nav
-(defvar window-buffer-need-record 'prev)
-(defun record-window-buffer (&optional window)
-  "Record WINDOW's buffer.
-WINDOW must be a live window and defaults to the selected one."
-  (let ((get-buffers 'window-prev-buffers)
-        (set-buffers 'set-window-prev-buffers))
-    (when (eq window-buffer-need-record 'next)
-      (setq get-buffers 'window-next-buffers)
-      (setq set-buffers 'set-window-next-buffers))
-
-    (let* ((window (window-normalize-window window t))
-           (buffer (window-buffer window))
-           (entry (assq buffer (funcall get-buffers window))))
-      (when entry
-        ;; Remove all entries for BUFFER from WINDOW's previous buffers.
-        (funcall set-buffers
-                 window (assq-delete-all buffer
-                                         (funcall get-buffers window))))
-
-      ;; Don't record insignificant buffers.
-      (unless (eq (aref (buffer-name buffer) 0) ?\s)
-        (with-current-buffer buffer
-          (let ((start (window-start window))
-                (point (window-point window)))
-            (setq entry
-                  (cons buffer
-                        (if entry
-                            ;; We have an entry, update marker positions.
-                            (list (set-marker (nth 1 entry) start)
-                                  (set-marker (nth 2 entry) point))
-                          ;; Make new markers.
-                          (list (copy-marker start)
-                                (copy-marker
-                                 ;; Preserve window-point-insertion-type
-                                 ;; (Bug#12588).
-                                 point window-point-insertion-type)))))
-            (funcall set-buffers
-                     window (cons entry (funcall get-buffers window)))))))))
-
-;; }}}
-
-;; {{{ Help buffer nav
-;;;###autoload
-(defun help-nav-forward ()
-  (interactive)
-  (let ((buf (get-buffer "*Help*")))
-    (when (buffer-live-p buf)
-      (with-current-buffer buf
-        (call-interactively 'help-go-forward)))))
-;;;###autoload
-(defun help-nav-backward ()
-  (interactive)
-  (let ((buf (get-buffer "*Help*")))
-    (when (buffer-live-p buf)
-      (with-current-buffer buf
-        (call-interactively 'help-go-back)))))
 ;; }}}
 
 (provide 'basic)
