@@ -532,19 +532,21 @@
    ("M-y" . consult-yank-pop)
    ("C-c o" . consult-outline)
    ("C-c i" . consult-imenu)
-   ("C-c C-I" . consult-eglot-symbols)
+   ("C-c C-m" . consult-flymake)               ;; Alternative: consult-flycheck
 
    ;; M-g bindings in `goto-map'
    ("M-g e" . consult-compile-error)
    ("M-g r" . consult-grep-match)
-   ("M-g f" . consult-flymake)               ;; Alternative: consult-flycheck
+   ("M-g f" . consult-find)
    ("M-g g" . consult-goto-line)             ;; orig. goto-line
    ("M-g M-g" . consult-goto-line)           ;; orig. goto-line
    ("M-g o" . consult-outline)               ;; Alternative: consult-org-heading
+   ("M-g SPC" . consult-mark)
    ("M-g M-SPC" . consult-mark)
    ("M-g k" . consult-global-mark)
    ("M-g i" . consult-imenu)
-   ("M-g I" . consult-imenu-multi)
+   ("M-g M-i" . consult-imenu-multi)
+   ("M-g I" . consult-eglot-symbols)
 
    ;; M-s bindings in `search-map'
    ("M-s d" . consult-find)                  ;; Alternative: consult-fd
@@ -553,18 +555,17 @@
    ("M-s G" . consult-git-grep)
    ("M-s r" . consult-ripgrep)
    ("M-s l" . consult-line)
-   ("M-s L" . consult-line-multi)
+   ("M-s M-l" . consult-line-multi)
    ("M-s k" . consult-keep-lines)
    ("M-s u" . consult-focus-lines)
    ("M-s M-o" . consult-line-thing-at-point)
 
    ;; Isearch integration
-   ("M-s e" . consult-isearch-history)
    :map isearch-mode-map
    ("M-e" . consult-isearch-history)         ;; orig. isearch-edit-string
    ("M-s e" . consult-isearch-history)       ;; orig. isearch-edit-string
    ("M-s l" . consult-line)                  ;; needed by consult-line to detect isearch
-   ("M-s L" . consult-line-multi)            ;; needed by consult-line to detect isearch
+   ("M-s M-l" . consult-line-multi)            ;; needed by consult-line to detect isearch
    ("C-o" . my/do-consult-line-from-isearch)
    ("C-S-o" . my/do-consult-line-multi-from-isearch)
    ("M-o" . my/do-consult-rg-from-isearch)
@@ -733,7 +734,7 @@
   :ensure t
   :config
   (setq hydra-is-helpful t
-        hydra-hint-display-type 'posframe)
+        hydra-hint-display-type 'message)
   )
 
 (use-package basic
@@ -1056,6 +1057,39 @@ _h_   _l_   _o_k        _y_ank
 
 (use-package org
   :ensure t
+  :bind
+  (("C-c l" . #'org-store-link)
+  ("C-c a" . #'org-agenda)
+  ("C-c c" . #'org-capture)
+
+  :map org-mode-map
+  ("C-c J" . #'hydra-org-motion/org-next-visible-heading)
+  ("C-c K" . #'hydra-org-motion/org-previous-visible-heading)
+  ("C-c U" . #'hydra-org-motion/org-up-heading-safe)
+  ("C-c F" . #'hydra-org-motion/org-forward-heading-same-level)
+  ("C-c B" . #'hydra-org-motion/org-backward-heading-same-level)
+  ("C-c *" . #'hydra-org-motion/org-ctrl-c-star)
+  ("C-c -" . #'hydra-org-motion/org-ctrl-c-minus)
+  ("C-c M-j" . #'hydra-org-motion/org-metadown)
+  ("C-c M-k" . #'hydra-org-motion/org-metaup)
+  ("C-c M-h" . #'hydra-org-motion/org-shiftmetaleft)
+  ("C-c M-l" . #'hydra-org-motion/org-shiftmetaright))
+
+  :preface
+  (defhydra hydra-org-motion ()
+    "org motion commands"
+    ("J" org-next-visible-heading "next")
+    ("K" org-previous-visible-heading "previous")
+    ("U" org-up-heading-safe "up")
+    ("F" org-forward-heading-same-level "forward")
+    ("B" org-backward-heading-same-level "backward")
+    ("*" org-ctrl-c-star "toggle heading")
+    ("-" org-ctrl-c-minus "cycle bullet")
+    ("M-j" org-metadown "metadown")
+    ("M-k" org-metaup "metaup")
+    ("M-h" org-shiftmetaleft "shiftmetaleft")
+    ("M-l" org-shiftmetaright "shiftmetaright"))
+
   :config
   (keymap-unset org-mode-map "S-RET") ; Unshadow toggle bottom pane
 
@@ -1064,7 +1098,8 @@ _h_   _l_   _o_k        _y_ank
   (setq org-latex-listings 'minted
         org-special-ctrl-a/e t
         org-special-ctrl-k t
-        org-ctrl-k-protect-subtree t)
+        org-ctrl-k-protect-subtree t
+        org-list-use-circular-motion t)
   (setq org-hide-emphasis-markers t
         org-startup-indented t
         ;; org-bullets-bullet-list '(" ") ;; no bullets, needs org-bullets package
