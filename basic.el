@@ -302,18 +302,21 @@ wide. Otherwise, return nil."
         (error "The window in this direction is dedicated")))
 
       (set-window-settings other-window this-window-settings)
-      (select-window other-window)
 
       (cond
        ((eq basic-buffer-move-behavior 'move)
-        (switch-to-prev-buffer this-window))
+        (switch-to-prev-buffer this-window)
+        (select-window other-window))
        ((eq basic-buffer-move-behavior 'swap)
-        (set-window-settings this-window other-window-settings))
+        (set-window-settings this-window other-window-settings)
+        (select-window other-window))
        ((eq basic-buffer-move-behavior 'combine)
+        (switch-to-prev-buffer this-window)
         (if (eq (window-dedicated-p this-window) 'side)
             (basic/toggle-window-on-side
              (window-parameter this-window 'window-side))
-          (delete-window this-window)))
+          (delete-window this-window))
+        (select-window other-window))
        ;; fall-through: 'dup
        )
 
