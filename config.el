@@ -129,9 +129,7 @@
 (define-key ctrl-x-f-map "t" 'set-tab-width)
 (define-key ctrl-x-f-map "h" 'hexl-mode)
 (define-key ctrl-x-f-map "r" 'revert-buffer)
-(define-key ctrl-x-f-map "s" 'magit-status)
-(define-key ctrl-x-f-map "b" 'magit-blame)
-;; (define-key ctrl-x-f-map "l" 'calendar)
+(define-key ctrl-x-f-map "l" 'calendar)
 
 (defvar ctrl-x-comma-map (make-sparse-keymap))
 (define-key ctrl-x-comma-map "c" 'calculator)
@@ -811,7 +809,7 @@
             display-buffer--maybe-bottom-panel
             display-buffer-same-window))
 
-         '("^ *\\*.*\\*\\(<[[:digit:]]+>\\)?$\\|^magit-log:.*"
+         '("^ *\\*.*\\*\\(<[[:digit:]]+>\\)?$\\|^magit-log\\((.+)\\)?:.*"
            (display-buffer-reuse-window
             display-buffer--maybe-bottom-panel
             display-buffer-same-window))
@@ -1095,6 +1093,17 @@ _h_   _l_   _o_k        _y_ank
 
 (use-package magit
   :ensure t
+  :bind
+  (
+   ("C-c f" . #'magit-file-dispatch)
+   ("C-x l". #'magit-log-buffer-file)
+
+   :map ctrl-x-f-map
+   ("s" . #'magit-status)
+   ("b" . #'magit-blame)
+   ("l" . #'magit-log-buffer-file)
+   )
+
   :config
   (setq magit-auto-revert-mode nil
         magit-last-seen-setup-instructions "1.4.0"))
@@ -1256,7 +1265,8 @@ _h_   _l_   _o_k        _y_ank
   :hook (prog-mode . copilot-mode)
   :config
   (setq
-   copilot-indent-offset-warning-disable t)
+   copilot-indent-offset-warning-disable t
+   copilot-enable-parentheses-balancer nil)
   (defun copilot-action-with-fallback (action &optional fallback)
     `(lambda ()
        (interactive)
