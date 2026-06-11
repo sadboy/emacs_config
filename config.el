@@ -656,26 +656,28 @@
   (setq vundo-glyph-alist vundo-unicode-symbols
         vundo-window-side 'top))
 
-;; (use-package company
-;;   :ensure t
-;;   :bind
-;;   ("M-/" . company-other-backend)
-;;   :config
-;;   (setq company-idle-delay nil
-;;         company-tooltip-align-annotations t
-;;         company-show-numbers t
-;;         company-require-match nil
-;;         company-auto-commit t
-;;         company-tooltip-idle-delay .2
-;;         company-dabbrev-char-regexp "[[:word:]-_]"
-;;         company-dabbrev-ignore-case t
-;;         company-dabbrev-downcase nil
-;;         company-dabbrev-code-ignore-case t
-;;         company-dabbrev-code-other-buffers 'all
-;;         company-dabbrev-code-everywhere t
-;;         company-dabbrev-time-limit .2
-;;         company-dabbrev-code-time-limit .2)
-;;   (global-company-mode t))
+(use-package company
+  :ensure t
+  :vc (:url "https://github.com/sadboy/company-mode.git"
+            :branch "own-master")
+  :bind
+  ("M-/" . company-other-backend)
+  :config
+  (setq company-idle-delay nil
+        company-tooltip-align-annotations t
+        company-show-numbers t
+        company-require-match nil
+        company-auto-commit t
+        company-tooltip-idle-delay .2
+        company-dabbrev-char-regexp "[[:word:]-_]"
+        company-dabbrev-ignore-case t
+        company-dabbrev-downcase nil
+        company-dabbrev-code-ignore-case t
+        company-dabbrev-code-other-buffers 'all
+        company-dabbrev-code-everywhere t
+        company-dabbrev-time-limit .2
+        company-dabbrev-code-time-limit .2)
+  (global-company-mode t))
 
 
 ;; Here is the equivalent setup using **Corfu** and **Cape** (which provides the
@@ -686,37 +688,68 @@
 ;; 2. **`company-show-numbers`**: Achieved by enabling the built-in `corfu-indexed-mode`.
 ;; 3. **Dabbrev settings**: Corfu uses Emacs's native `dabbrev` library under the hood (via `cape-dabbrev`), so `company-dabbrev-*` variables are mapped to their native Emacs `dabbrev-*` equivalents.
 
-(use-package corfu
-  :ensure t
-  :bind
-  ("M-/" . completion-at-point)    ; Manual completion trigger
-  :init
-  (global-corfu-mode t)
-  :config
-  (setq corfu-auto nil)                 ; company-idle-delay nil (manual trigger)
-  (setq corfu-align-annotations t)      ; company-tooltip-align-annotations t
-  (setq corfu-preview-current t)        ; Help with auto-commit behavior
-  (setq corfu-quit-no-match nil)
-  (setq corfu-border-width 3)
-  ;; Enable corfu-indexed to show numbers (company-show-numbers)
-  (corfu-indexed-mode t)
-)
+;; (use-package corfu
+;;   :ensure t
+;;   :bind
+;;   (("M-/" . completion-at-point)    ; Manual completion trigger
+;;    )
 
-;; Emacs built-in dabbrev configuration (used by Cape/Corfu)
-(use-package dabbrev
-  :custom
-  (dabbrev-case-fold-search t)      ; company-dabbrev-ignore-case t
-  (dabbrev-case-replace nil)        ; company-dabbrev-downcase nil
-  (dabbrev-check-other-buffers t)   ; company-dabbrev-code-other-buffers 'all
-  (dabbrev-friend-buffer-function (lambda (buf) t)) ; Search all buffers
-  )
+;;   :preface
+;;   (defconst my/corfu-accept-and-insert-list '(" " "." "," "/" ";" ":" "?" "!" "-" "="
+;;                                               "[" "]" "(" ")" "{" "}" "|" "\\" "'" "`"
+;;                                               "<" ">" "\M-(" "\"" "_" "+" "~"
+;;                                               ;; "\M-f" "\M-b"
+;;                                               "\M-a" "\M-e"
+;;                                               ))
 
-;; Cape provides the Dabbrev Capf and other backends
-(use-package cape
-  :ensure t
-  :init
-  ;; Add dabbrev to the default completion-at-point-functions
-  (add-to-list 'completion-at-point-functions #'cape-dabbrev))
+;;   (defun my/corfu-pass-through ()
+;;     (let* ((event-vec (vector last-input-event))
+;;            (local-map (current-local-map))
+;;            (command
+;;             (or (and local-map (lookup-key local-map event-vec))
+;;                 (lookup-key (current-global-map) event-vec))))
+;;       (when (commandp command) (call-interactively command))))
+
+;;   (defun my/corfu-accept-and-passthrough ()
+;;     "Perform the completion, then the same command again."
+;;     (interactive)
+;;     (corfu-insert)
+;;     (my/corfu-pass-through))
+
+;;   :init
+;;   (global-corfu-mode t)
+;;   :config
+;;   (dolist (key my/corfu-accept-and-insert-list)
+;;     (define-key corfu-map key #'my/corfu-accept-and-passthrough))
+
+;;   (setq corfu-auto nil)                 ; company-idle-delay nil (manual trigger)
+;;   (setq corfu-align-annotations t)      ; company-tooltip-align-annotations t
+;;   (setq corfu-preselect 'prompt)
+;;   (setq corfu-preview-current nil)
+;;   (setq corfu-on-exact-match 'show)
+;;   (setq corfu-cycle t)
+;;   (setq corfu-quit-no-match nil)
+;;   (setq corfu-border-width 3)
+;;   ;; Enable corfu-indexed to show numbers (company-show-numbers)
+;;   (corfu-indexed-mode t)
+;; )
+
+;; ;; Emacs built-in dabbrev configuration (used by Cape/Corfu)
+;; (use-package dabbrev
+;;   :custom
+;;   (dabbrev-case-fold-search t)      ; company-dabbrev-ignore-case t
+;;   (dabbrev-case-replace nil)        ; company-dabbrev-downcase nil
+;;   (dabbrev-check-other-buffers t)   ; company-dabbrev-code-other-buffers 'all
+;;   (dabbrev-friend-buffer-function (lambda (buf) t)) ; Search all buffers
+;;   )
+
+;; ;; Cape provides the Dabbrev Capf and other backends
+;; (use-package cape
+;;   :ensure t
+;;   :init
+;;   ;; Add dabbrev to the default completion-at-point-functions
+;;   (add-to-list 'completion-at-point-functions #'cape-dabbrev))
+
 
 (use-package ace-window
   :ensure t)
