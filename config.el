@@ -528,6 +528,7 @@
   :bind
   (("C-x b" . consult-buffer)
    ("M-y" . consult-yank-pop)
+   ("C-S-g" . consult-ripgrep)
    ("C-c o" . consult-outline)
    ("C-c i" . consult-imenu)
    ("C-c C-m" . consult-flymake)               ;; Alternative: consult-flycheck
@@ -609,6 +610,9 @@
   ;; Use Consult to select xref targets (e.g., multi-matches)
   (setq xref-show-xrefs-function #'consult-xref
         xref-show-definitions-function #'consult-xref)
+  (setq consult-ripgrep-args
+        "rg --null --line-buffered --color=never --max-columns=1000 --path-separator /\
+   --smart-case --no-heading --with-filename --line-number --hidden")
   (consult-customize
    consult-buffer consult-theme :preview-key '(:debounce 0.2 any)
    consult-ripgrep consult-git-grep consult-grep consult-man
