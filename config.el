@@ -1263,37 +1263,37 @@ _h_   _l_   _o_k        _y_ank
   (jarchive-setup))
 
 (use-package copilot
-  :ensure t
-  :vc (copilot :url "https://github.com/copilot-emacs/copilot.el")
+  ;; :vc (copilot :url "https://github.com/sadboy/copilot.el.git"
+  ;;              ;; Note: move back to official repo once the tramp support PR is
+  ;;              ;; merged:
+  ;;              :branch "feat/tramp")
+  :vc t
+  :load-path "~/emacs/copilot.el/"
 
-  :hook (prog-mode . copilot-mode)
+  :hook
+  ;; (prog-mode . (lambda ()
+  ;;                (when (not (file-remote-p (buffer-file-name)))
+  ;;                  (copilot-mode t))))
+  (prog-mode . copilot-mode)
+
+  :bind
+  ("C-c p" . #'copilot-mode)
+
+  (:map copilot-mode-map
+        ("M-]" . #'copilot-complete))
+  (:map ctrl-x-comma-map
+        ("k" . #'copilot-clear-overlay))
+  (:map copilot-completion-map
+        ("<tab>" . #'copilot-accept-completion-by-line)
+        ("C-<tab>" . #'copilot-accept-completion)
+        ("C-M-f" . #'copilot-accept-completion-by-word)
+        ("M-]" . #'copilot-next-completion)
+        ("M-[" . #'copilot-previous-completion))
+
   :config
   (setq
    copilot-indent-offset-warning-disable t
    copilot-enable-parentheses-balancer nil)
-  (defun copilot-action-with-fallback (action &optional fallback)
-    `(lambda ()
-       (interactive)
-       (if (copilot--overlay-visible)
-           (call-interactively ',action)
-         (when (commandp ',fallback)
-           (call-interactively ',fallback)))
-       ))
-
-  (define-key copilot-mode-map (kbd "<tab>")
-              (copilot-action-with-fallback
-               #'copilot-accept-completion-by-line
-               #'indent-for-tab-command))
-  (define-key copilot-mode-map (kbd "C-M-f")
-              (copilot-action-with-fallback
-               #'copilot-accept-completion-by-word
-               #'forward-sexp))
-  (define-key copilot-mode-map (kbd "C-<tab>")
-              (copilot-action-with-fallback #'copilot-accept-completion))
-  (define-key copilot-mode-map (kbd "M-]")
-              (copilot-action-with-fallback #'copilot-next-completion #'copilot-complete))
-  (define-key copilot-mode-map (kbd "M-[")
-              (copilot-action-with-fallback #'copilot-previous-completion #'copilot-complete))
   )
 
 (use-package gptel
