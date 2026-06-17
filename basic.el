@@ -46,15 +46,44 @@
     (message "Tab width set to %d (was %d)" arg tab-width)
     (setq tab-width arg)))
 
+;;;###autoload
+(defun basic/read-stdin-to-buffer-cmd (tmpfile)
+  "Emacs-side function for reading stdin to a buffer.
+Meant to be called from e.g. emacsclient or vterm"
+  (let* ((b (create-file-buffer "<stdin>"))
+         (maybe-remote-prefix (file-remote-p default-directory))
+         (tmpfile (if maybe-remote-prefix
+                      (concat maybe-remote-prefix tmpfile)
+                    tmpfile)))
+    (switch-to-buffer b)
+    (insert-file-contents tmpfile)
+    (delete-file tmpfile)))
+
+;;;###autoload
+(defun basic/find-file-on-host-cmd (file)
+  "Like `find-file', but scoped to the tramp remote prefix of `default-directory'
+Meant to be called from e.g. emacsclient or vterm"
+  (let* ((maybe-remote-prefix (file-remote-p default-directory))
+         (file
+          (cond
+           ((not (file-name-absolute-p file))
+            file)
+           (maybe-remote-prefix
+            (concat maybe-remote-prefix file))
+           (t file))))
+    (find-file file)))
+
 (defun basic/action-from-isearch (action)
   "Invoke `action' on the current isearch query."
   (let ((case-fold-search isearch-case-fold-search)
-        (query (if isearch-regexp
-                   isearch-string
-                 (if (or (eq isearch-regexp-function 'isearch-symbol-regexp)
-                         (eq isearch-regexp-function 'word-search-regexp))
-                     (format "\\b%s\\b" (regexp-quote isearch-string))
-                   (regexp-quote isearch-string)))))
+        (query (cond
+                (isearch-regexp isearch-string)
+                ((eq isearch-regexp-function 'isearch-symbol-regexp)
+                 (format "\\_<%s\\_>" (regexp-quote isearch-string)))
+                ((eq isearch-regexp-function 'word-search-regexp)
+                 (format "\\<%s\\>" (regexp-quote isearch-string)))
+                (t
+                 (regexp-quote isearch-string)))))
     (isearch-exit)
     (deactivate-mark)
     (funcall action query)))
