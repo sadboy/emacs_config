@@ -150,9 +150,18 @@ function ff() {
 
 function pff ()
 {
-    local file=$(git ls-files --full-name ":/" 2>/dev/null | fzf --query="$1")
-    if [ -n "$file" ] ; then
-        (cd $(git rev-parse --show-toplevel) && ff "$file")
+    # If inside a Git repository, use fzf to find a file from the Git root;
+    # otherwise, use fzf to find a file from the current directory.
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1 ; then
+        local file=$(git ls-files --full-name ":/" 2>/dev/null | fzf --query="$1")
+        if [ -n "$file" ] ; then
+            (cd "$(git rev-parse --show-toplevel)" && ff "$file")
+        fi
+    else
+        local file=$(fzf --query="$1")
+        if [ -n "$file" ] ; then
+            ff "$file"
+        fi
     fi
 }
 
