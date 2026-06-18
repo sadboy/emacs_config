@@ -1,0 +1,313 @@
+#!/bin/bash
+# -*- mode: shell-script; -*-
+
+INSIDE_EMACS=${INSIDE_EMACS:-${LC_INSIDE_EMACS}}
+LC_INSIDE_EMACS=${INSIDE_EMACS}
+
+EMACS_PREFIX=${EMACS_PREFIX:-/usr}
+EMACS_BIN="${EMACS_PREFIX}/bin"
+EMACS=${EMACS_BIN}/emacs
+EMACSCLIENT=${EMACS_BIN}/emacsclient
+if [ "x${EMACS_SERVERNAME}" != "x" ] ; then
+    EMACSCLIENT_ARGS="-s ${EMACS_SERVERNAME}"
+else
+    EMACSCLIENT_ARGS=
+fi
+
+# alias emacsclient="${EMACS_BIN}/emacsclient ${EMACSCLIENT_ARGS}"
+
+if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
+
+    function vterm_printf() {
+        if [ -n "$TMUX" ] \
+               && { [ "${TERM%%-*}" = "tmux" ] \
+                        || [ "${TERM%%-*}" = "screen" ]; }; then
+            # Tell tmux to pass the escape sequences through
+            printf "\ePtmux;\e\e]%s\007\e\\" "$1"
+        elif [ "${TERM%%-*}" = "screen" ]; then
+            # GNU screen (screen, screen-256color, screen-256color-bce)
+            printf "\eP\e]%s\007\e\\" "$1"
+        else
+            printf "\e]%s\e\\" "$1"
+        fi
+    }
+
+    function vterm_prompt_end() {
+        vterm_printf "51;A$(whoami)@$(hostname):$(pwd)"
+    }
+
+    function vterm_cmd() {
+        local vterm_elisp
+        vterm_elisp=""
+        while [ $# -gt 0 ]; do
+            vterm_elisp="$vterm_elisp""$(printf '"%s" ' "$(printf "%s" "$1" | sed -e 's|\\|\\\\|g' -e 's|"|\\"|g')")"
+            shift
+        done
+        vterm_printf "51;E$vterm_elisp"
+    }
+
+    function message() {
+        vterm_cmd message "%s" "$*"
+    }
+fi
+
+function add_path () {
+    local pathvar=$1
+    local found=false
+
+    for component in ${!pathvar//:/ } ; do
+        if [ "x$2" = "x${component}" ] ; then
+            found=true
+            break
+        fi
+    done
+    if ! $found ; then
+        eval ${pathvar}=$2:${!pathvar}
+    fi
+}
+
+function delete_path_component () {
+    local pathvar=$1
+    local regex="^x$2"
+    local newpath=""
+    local hasfound=0
+
+    for component in ${!pathvar//:/ } ; do
+        if [ $hasfound -eq 1 ] || ! [[ "x${component}" =~ ${regex} ]] ; then
+            [ "x${newpath}" != "x" ] && component=":${component}" ;
+            newpath=${newpath}${component} ;
+        elif [ $hasfound -eq 0 ] ; then
+            hasfound=1
+        fi
+    done ;
+    eval "${pathvar}=\${newpath}"
+}
+
+[ -n "${ANDROID_HOME}" ] && add_path PATH ${ANDROID_HOME}/platform-tools
+[ -n "${ANDROID_HOME}" ] && add_path PATH ${ANDROID_HOME}/tools
+add_path PATH ${EMACS_BIN}
+
+if [ "x${ORACL_LBIN}" != "x" ] ; then
+    add_path PATH ${ORACL_LBIN}
+fi
+[ "x${GIT_PATH}" != "x" ] && add_path PATH ${GIT_PATH}/bin
+
+if [ -z $DISPLAY ] ; then
+    EDITOR_ARGS="-t ${EMACSCLIENT_ARGS}"
+else
+    EDITOR_ARGS="-c ${EMACSCLIENT_ARGS}"
+fi
+
+case $TERM in
+    xterm*)
+        # Use 256 colors
+        export TERM=xterm-256color
+        ;;
+    eterm*)
+        # We're in Emacs, no need to create new term
+        EDITOR_ARGS=${EMACSCLIENT_ARGS}
+        ;;
+    *)
+        ;;
+esac
+
+function killemacs ()
+{
+    emacsclient -n -e "(kill-emacs)"
+}
+
+function emacs_package ()
+{
+    local action="$1"
+    local pkg="$2"
+    if [ -z "$pkg" ] ; then
+        echo "Usage: $@ [ACTION] [PACKAGE]"
+        return 1
+    fi;
+
+    emacs -Q -batch -eval \
+          "(progn (require 'package) (add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\")) (package-refresh-contents) (package-${action} '${pkg}))"
+}
+
+function ff() {
+    if [ "x$@" = "x-" ] ; then
+        TMP="$(mktemp --tmpdir Reemacsstdin.XXX)";
+        cat > "$TMP";
+        if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
+            vterm_cmd read-stdin "$(realpath "${TMP}")"
+        else
+            emacsclient ${EDITOR_ARGS} -e "(basic/read-stdin-to-buffer-cmd \"$(realpath "${TMP}")\")"
+        fi
+
+    else
+        if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
+            vterm_cmd basic-find-file "$(realpath "${@:-.}")"
+        else
+            emacsclient ${EDITOR_ARGS} "$(realpath "${@:-.}")"
+        fi
+    fi
+}
+
+function pff ()
+{
+    local file=$(git ls-files --full-name ":/" 2>/dev/null | fzf --query="$1")
+    if [ -n "$file" ] ; then
+        (cd $(git rev-parse --show-toplevel) && ff "$file")
+    fi
+}
+
+function _project_find_file () {
+    local cur=${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=($(compgen -W "$(git ls-files 2>/dev/null)" -- ${cur}))
+}
+complete -F _project_find_file -o bashdefault -o default emc
+complete -F _project_find_file -o bashdefault -o default emf
+complete -F _project_find_file -o bashdefault -o default emt
+
+__ENV_PS1=""
+
+function _project_sw () {
+    if [ -z "$1" ] || [ -z "$2" ]; then
+        echo "Usage: $@ [SUBDIR]"
+        return 1
+    fi;
+
+    local dir="$1/$2"
+    local olddir="$1/${__ENV_PS1}"
+
+    if [ ! -d  "${dir}" ]; then
+        echo "Error: ${dir} does not exist."
+    else
+        cd ${dir};
+        delete_path_component PATH "${olddir}/bin"
+        delete_path_component PYTHONPATH "${olddir}"
+        [ -d "${dir}/bin" ] && add_path PATH "${dir}/bin"
+        PYTHONPATH=${dir}:${PYTHONPATH}
+        export PATH PYTHONPATH
+        __ENV_PS1="$2"
+    fi;
+    return 0
+}
+
+function ppsw () {
+    _project_sw ${DISTALGO_ROOT} $1
+}
+
+function mpsw () {
+    _project_sw ${MACROPY_ROOT} $1
+}
+
+function venvsw () {
+    if [ -z "$@" ] ; then
+        echo "Usage: $@ [SUBDIR]"
+        return 1
+    fi;
+
+    local dir="${PYTHON_VENVS}/$1"
+
+    if [ ! -d "${dir}" -o ! -d "${dir}/bin" -o ! -e "${dir}/bin/activate" ] ; then
+        echo "Error: ${dir} does not exist or is not a Python virtualenv."
+    else
+        . ${dir}/bin/activate
+    fi;
+}
+
+function venvnew () {
+    if [ -z "$@" ] ; then
+        echo "Usage: $@ [SUBDIR]"
+        return 1
+    fi;
+
+    local dir="${PYTHON_VENVS}/$1"
+    local PYTHON
+
+    if [ -d "${dir}" ] ; then
+        echo "Error: ${dir} already exists."
+    else
+        if [ -z "${PYTHON}" ] ; then
+            PYTHON=python3
+        fi;
+        $PYTHON -m venv ${dir}
+        if [ $? -eq 0 ] ; then
+            . ${dir}/bin/activate
+        fi;
+    fi;
+}
+
+function venvrm () {
+    if [ -z "$@" ] ; then
+        echo "Usage: $@ [SUBDIR]"
+        return 1
+    fi;
+
+    local dir="${PYTHON_VENVS}/$1"
+
+    if [ ! -d "${dir}" ] ; then
+        echo "Error: ${dir} does not exist."
+    else
+        read -p "Permanently removing ${dir}, proceed? " -n 1 -r
+        echo ""
+        if [[ "x${REPLY}" =~ ^x[Yy]$ ]] ; then
+            echo "Removing ${dir}..."
+            rm -rf ${dir}
+        fi;
+    fi;
+}
+
+GFIND=${GFIND:-find}
+
+function _ppsw () {
+    local cur
+    cur=${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=($(compgen -W "$(${GFIND} ${DISTALGO_ROOT} -mindepth 1 -maxdepth 1 -type d -printf '%f ')" -- ${cur}))
+}
+function _mpsw () {
+    local cur
+    cur=${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=($(compgen -W "$(${GFIND} ${MACROPY_ROOT} -mindepth 1 -maxdepth 1 -type d -printf '%f ')" -- ${cur}))
+}
+function _venvsw () {
+    local cur
+    cur=${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=($(compgen -W "$(${GFIND} ${PYTHON_VENVS} -mindepth 1 -maxdepth 1 -type d -printf '%f ')" -- ${cur}))
+}
+complete -F _ppsw ppsw
+complete -F _mpsw mpsw
+complete -F _venvsw venvsw
+complete -F _venvsw venvrm
+
+function __env_ps1 () {
+    if [ "x$(type -t _scm_prompt)" = "xfunction" ] ; then
+        echo -n "[${__ENV_PS1}:$(_scm_prompt %s)]"
+    elif [ "x$(type -t __git_ps1)" = "xfunction" ] ; then
+        echo -n "[${__ENV_PS1}:$(__git_ps1 %s)]"
+    else
+        echo -n "[${__ENV_PS1}]"
+    fi;
+}
+
+add_path PATH ${HOME}/bin
+
+case "$TERM" in
+    xterm-*color)
+        PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[01;33m\]$(__env_ps1 "[%s]")\[\033[00m\]\n\$ '
+
+        ;;
+    *)
+        PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+        ;;
+esac
+
+if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
+    PS1=$PS1'\[$(vterm_prompt_end)\]'
+fi
+
+if [ "$TERM_PROGRAM" = "vscode" ]; then
+    export EDITOR="code --wait"
+else
+    export EDITOR="${EMACSCLIENT} ${EDITOR_ARGS}"
+fi
+
+export EMACS_PREFIX
+export INSIDE_EMACS LC_INSIDE_EMACS
+export PATH INFOPATH GOPATH MYPROJECTS ANDROID_HOME
