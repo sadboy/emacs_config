@@ -688,7 +688,7 @@
 (use-package vundo
   :ensure t
   :bind
-  (("C-c /" . vundo))
+  (("C-c C-/" . vundo))
   :config
   (setq vundo-glyph-alist vundo-unicode-symbols
         vundo-window-side 'top))
@@ -829,6 +829,14 @@
             display-buffer-in-side-window
             ;; display-buffer--maybe-top-panel
             ;; display-buffer--maybe-bottom-panel
+            display-buffer--maybe-pop-up-window
+            display-buffer-use-some-window)
+           (side . top)
+           (dedicated . t)
+           (inhibit-same-window . t))
+         ;; vundo popup:
+         `("^ *\\*vundo tree\\*"
+           (display-buffer-in-side-window
             display-buffer--maybe-pop-up-window
             display-buffer-use-some-window)
            (side . top)
@@ -1326,7 +1334,7 @@ buffers, instead of going through the tramp-managed connection."
 (use-package eglot
   :after tree-sitter
   :preface
-  (defface eglot-mutable-face
+  (defface eglot-semantic-mutable
     '((t :underline t))
     "Face for mutable variables.")
 
@@ -1346,11 +1354,6 @@ buffers, instead of going through the tramp-managed connection."
         )
   :config
   (remove-hook 'rust-mode-hook #'tree-sitter-hl-mode)
-
-  ;; Map the 'mutable' modifier from rust-analyzer to the underline face
-  ;; (add-to-list 'eglot-semantic-token-mappings '(mutable . eglot-mutable-face))
-  (add-to-list 'eglot-semantic-token-types "mutable")
-  (add-to-list 'eglot-semantic-token-modifiers "mutable")
 
   (setq-default eglot-workspace-configuration
                 '(:rust-analyzer
@@ -1442,18 +1445,30 @@ buffers, instead of going through the tramp-managed connection."
           :stream t
           :models '(gemini-flash-latest
                     gemini-3.5-flash gemini-3.1-flash-lite)))
+  (setq my/gptel/gemini-search-backend
+        (gptel-make-gemini "Gemini-Search"
+          :key (gptel-api-key-from-auth-source "api.google.com")
+          :stream t
+          :request-params '(:tools [(:googleSearch  ())])
+          :models '(gemini-flash-latest
+                    gemini-3.5-flash gemini-3.1-flash-lite)))
   (setq my/gptel/anthropic-backend
         (gptel-make-anthropic "Claude"
           :key (gptel-api-key-from-auth-source "api.anthropic.com")
           :stream t
           :models '(claude-sonnet-4-6 claude-opus-4-8)))
+  (setq my/gptel/deepseek-backend
+        (gptel-make-deepseek "DeepSeek"
+          :key (gptel-api-key-from-auth-source "api.deepseek.com")
+          :stream t
+          :models '(deepseek-v4-pro deepseek-v4-flash)))
   (setq my/gptel/qwen-local-backend
         (gptel-make-openai "vllm-local"
           :host "athena:8888"
           :protocol "http"
           :key "nokey"
           :models '(qwen3.6)))
-  (setq gptel-backend my/gptel/gemini-backend
+  (setq gptel-backend my/gptel/gemini-search-backend
         gptel-model 'gemini-3.5-flash)
   (setq gptel-default-mode 'org-mode)
 
