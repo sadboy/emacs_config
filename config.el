@@ -105,7 +105,7 @@
 (quietly-read-abbrev-file)
 (show-paren-mode t)
 (global-display-fill-column-indicator-mode t)
-(global-visual-line-mode t)
+;; (global-visual-line-mode t)
 
 ;; {{{ Global key bindings
 (global-set-key "\C-xQ" 'save-buffers-kill-emacs)
@@ -170,6 +170,7 @@
    '((shell-file-name . "/bin/bash")))
 
   :config
+  (setq tramp-default-method "ssh")
   (setq ;;remote-file-name-inhibit-locks t
         tramp-use-scp-direct-remote-copying t
         remote-file-name-inhibit-auto-save-visited t)
@@ -184,8 +185,11 @@
   (connection-local-set-profiles
    '(:application tramp :protocol "ssh")
    'remote-direct-async-process)
+  (connection-local-set-profiles
+   '(:application tramp :protocol "scp")
+   'remote-direct-async-process)
 
-  (add-to-list 'tramp-connection-properties (list "/ssh:" "direct-async" t))
+  (add-to-list 'tramp-connection-properties (list "/\\(ssh\\|scp\\):" "direct-async" t))
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
   )
 ;; Note: this actually makes things worse (and breaks project.el as well):
@@ -467,10 +471,12 @@
   (vertico-mode 1)
   (vertico-multiform-mode t)
   :config
-  (setq vertico-count 25) ; Mimics ivy-height
-  :bind (:map vertico-map
-              ("RET" . vertico-directory-enter) ; Mimics ivy-alt-done for directories
-              ("DEL" . vertico-directory-delete-char)))
+  (setq vertico-count 22)
+  :bind
+  (:map vertico-map
+        ("C-k" . #'kill-line)
+        ("RET" . #'vertico-directory-enter) ; Mimics ivy-alt-done for directories
+        ("DEL" . #'vertico-directory-delete-char)))
 (use-package vertico-posframe
   :ensure t
   :after vertico
@@ -563,7 +569,7 @@
    :map isearch-mode-map
    ("M-e" . consult-isearch-history)         ;; orig. isearch-edit-string
    ("M-s e" . consult-isearch-history)       ;; orig. isearch-edit-string
-   ("M-s l" . consult-line)                  ;; needed by consult-line to detect isearch
+   ("M-s l" . consult-line-thing-at-point)                  ;; needed by consult-line to detect isearch
    ("M-s M-l" . consult-line-multi)            ;; needed by consult-line to detect isearch
    ("C-o" . my/do-consult-line-from-isearch)
    ("C-S-o" . my/do-consult-line-multi-from-isearch)
@@ -571,12 +577,14 @@
 
    ;; Minibuffer history
    :map minibuffer-local-map
+   ("C-k" . kill-line)
    ("M-s" . consult-history)                 ;; orig. next-matching-history-element
    ("M-r" . consult-history)                 ;; orig. previous-matching-history-element
    ;; Keymaps mimicking your custom bindings
 
    :map ctrl-x-f-map
-   ("g" . consult-ripgrep)
+   ("g" . #'consult-ripgrep)
+   ("p" . #'consult-git-fzf)
 
    :map ctrl-x-comma-map
    ("," . vertico-repeat)                 ; ivy-resume
@@ -589,7 +597,7 @@
     "Invoke `consult-ripgrep' from isearch."
     (interactive)
     (basic/action-from-isearch (lambda (query)
-                                (consult-ripgrep nil query))))
+                                 (consult-ripgrep nil query))))
 
   (defun my/do-consult-line-from-isearch ()
     "Invoke `consult-ripgrep' from isearch."
@@ -605,6 +613,32 @@
     "Search for the symbol at point using `consult-line'."
     (interactive)
     (consult-line (thing-at-point 'symbol t)))
+
+  (defun my/consult-git-fzf-builder (query)
+    "Constructs a `git ls-files | fzf -f' command with the given query."
+      (list
+       "sh" "-c"
+       (format
+        "git ls-files --full-name \":/\" 2>/dev/null | fzf -f %s | head -n 100"
+        (shell-quote-argument query))))
+
+  (defun consult-git-fzf (initial)
+    "Fuzzy search for files in the current git repository using fzf."
+    (interactive "P")
+    (let ((default-directory (project-root (project-current t)))
+          ;; We want this to be fast, so don't annotate:
+          marginalia-annotators)
+      (find-file (consult--read
+                  (consult--process-collection #'my/consult-git-fzf-builder
+                    :file-handler t)
+                  :prompt "Git FZF: "
+                  :sort nil
+                  :require-match t
+                  :initial initial
+                  :add-history (thing-at-point 'filename)
+                  :category 'file
+                  :history '(:input consult--find-history)
+                  ))))
 
   :config
   ;; Use Consult to select xref targets (e.g., multi-matches)
@@ -635,13 +669,14 @@
   :ensure t
   :bind
   (
-   ;; ("C-M-m" . embark-act)                     ; Mimics ivy-call-and-recenter
+   ;; ("C-M-m" . #'embark-act)                     ; Mimics ivy-call-and-recenter
    ;; ("C-." . embark-dwim)                     ; Context-aware action
    ("C-h B" . embark-bindings)              ; Alternative to describe-bindings
    :map vertico-map
-   ("C-.". embark-act)
+   ("C-." . #'embark-act)
+   ("M-." . #'embark-become)
    :map isearch-mode-map                ; Make it available in isearch
-   ("C-.". embark-act)
+   ("C-.". #'embark-act)
    )
   :init
   (setq prefix-help-command #'embark-prefix-help-command))
@@ -693,8 +728,10 @@
 (use-package corfu
   :ensure t
   :bind
-  (("M-/" . completion-at-point)    ; Manual completion trigger
+  (("M-/" . #'completion-at-point)    ; Manual completion trigger
    )
+  (:map corfu-map
+        ("M-/" . #'corfu-scroll-down))
 
   :preface
   (defconst my/corfu-accept-and-insert-list '(" " "." "," "/" ";" ":" "?" "!" "-" "="
@@ -721,12 +758,15 @@
   :init
   (global-corfu-mode t)
   :config
+  (keymap-unset corfu-map "<tab>")      ; Reserve for copilot
+  (keymap-unset corfu-map "C-<tab>")      ; Reserve for copilot
+
   (dolist (key my/corfu-accept-and-insert-list)
     (define-key corfu-map key #'my/corfu-accept-and-passthrough))
 
   (setq corfu-auto nil)                 ; company-idle-delay nil (manual trigger)
   (setq corfu-align-annotations t)      ; company-tooltip-align-annotations t
-  (setq corfu-preselect 'prompt)
+  (setq corfu-preselect 'valid)
   (setq corfu-preview-current nil)
   (setq corfu-on-exact-match 'show)
   (setq corfu-cycle t)
@@ -734,7 +774,7 @@
   (setq corfu-border-width 3)
   ;; Enable corfu-indexed to show numbers (company-show-numbers)
   (corfu-indexed-mode t)
-)
+  )
 
 ;; Emacs built-in dabbrev configuration (used by Cape/Corfu)
 (use-package dabbrev
@@ -779,7 +819,7 @@
   :config
   (setq display-buffer-alist
         (list
-         '("^\\*scratch.*\\*\\|^COMMIT_EDITMSG$"
+         '("^\\*scratch.*\\*"
            (display-buffer-reuse-window
             display-buffer-same-window))
 
@@ -807,7 +847,7 @@
             display-buffer--maybe-right-panel
             display-buffer-same-window))
 
-         '("^\\(\\*\\([Hh]elp.*\\|eldoc.*\\|info.*\\|Command History\\)\\*\\)\\|^magit:.*"
+         '("^\\(\\*\\([Hh]elp.*\\|eldoc.*\\|info.*\\|Command History\\)\\*\\)\\|^magit:.*\\|^COMMIT_EDITMSG"
            (display-buffer-reuse-window
             display-buffer--maybe-right-panel
             display-buffer--maybe-bottom-panel
@@ -1000,14 +1040,14 @@ _h_   _l_   _o_k        _y_ank
    ("\C-x\C-q" . #'really-toggle-read-only)
 
    ("s-m" . (lambda ()
-                (interactive)
-                (basic/toggle-window-on-side 'bottom t)))
+              (interactive)
+              (basic/toggle-window-on-side 'bottom t)))
    ("s-s" . (lambda ()
-                (interactive)
-                (basic/toggle-window-on-side 'right t)))
+              (interactive)
+              (basic/toggle-window-on-side 'right t)))
    ("s-b" . (lambda ()
-                  (interactive)
-                  (basic/toggle-window-on-side 'left t)))
+              (interactive)
+              (basic/toggle-window-on-side 'left t)))
 
    )
   )
@@ -1020,42 +1060,100 @@ _h_   _l_   _o_k        _y_ank
   (compilation-mode . grep-context-mode))
 
 (use-package w3m
-  :ensure t
   :bind
   (("C-x W" . w3m)))
 
 (use-package vterm
-  :ensure t
   :bind
-  (("C-S-t" . vterm-other-window)
+  (("C-S-t" . (lambda ()
+              (interactive)
+              (my/vterm t)))
+   ("s-t" . #'my/vterm)
    :map project-prefix-map
-   ("t" . project-vterm))
+   ("t" . my/project-vterm)
+   :map vterm-mode-map
+   ("C-:" . #'vterm-copy-mode)
+   :map vterm-copy-mode-map
+   ("C-:" . #'vterm-copy-mode)
+   ("q" . #'vterm-copy-mode))
 
   :preface
-  (defun project-vterm ()
+  (defun my/cycle-vterm-buffers ()
+    "Cycle through active vterm buffers."
+    )
+
+  (defun my/vterm (&optional arg)
+    "Wrapper around `vterm' that creates a new ssh connection for remote
+buffers, instead of going through the tramp-managed connection."
+    (interactive "P")
+    (cond
+     ((and (stringp arg) (get-buffer arg))
+      (pop-to-buffer arg))
+     ((and default-directory (file-remote-p default-directory))
+      (with-parsed-tramp-file-name default-directory nil
+        (let* ((remote-shell (or (vterm--tramp-get-shell method) "/bin/bash"))
+               (destination (if user (format "%s@%s" user host) host))
+               (maybe-port-arg (if port (format "-p %s" port) ""))
+               (ssh-command
+                (format
+                 "ssh -t -o SetEnv=\"LC_INSIDE_EMACS=$INSIDE_EMACS\" %s %s 'cd %s; exec %s'"
+                 maybe-port-arg destination localname remote-shell))
+               (real-pwd default-directory)
+               (default-directory "~/")
+               (vterm-shell ssh-command)
+               (vterm-buffer-name (format "*vterm@%s*" host)))
+          (with-current-buffer (vterm arg)
+            (setq-local default-directory real-pwd)))))
+     (t
+      (vterm arg))))
+
+  (defun my/project-vterm ()
     (interactive)
     (defvar vterm-buffer-name)
     (let* ((default-directory (project-root (project-current t)))
-           (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
+           (buffer-name (project-prefixed-buffer-name "vterm")))
+      (my/vterm buffer-name)))
+
+  (defun my/buffer-vterm ()
+    (interactive)
+    (let* ((vterm-buffer-name "*vterm*")
            (vterm-buffer (get-buffer vterm-buffer-name)))
-      (if (and vterm-buffer (not current-prefix-arg))
-          (pop-to-buffer vterm-buffer
-                         (bound-and-true-p display-comint-buffer-action))
-        (vterm))))
+      (if vterm-buffer
+          (pop-to-buffer vterm-buffer)
+        (my/vterm))))
 
   :init
   (add-to-list 'project-switch-commands     '(project-vterm "Vterm") t)
   (add-to-list 'project-kill-buffer-conditions  '(major-mode . vterm-mode))
   :config
+  (push '("read-stdin" basic/read-stdin-to-buffer-cmd) vterm-eval-cmds)
+  (push '("basic-find-file" basic/find-file-on-host-cmd) vterm-eval-cmds)
   (setq vterm-copy-exclude-prompt t)
   (setq vterm-max-scrollback 100000)
-  (setq vterm-tramp-shells '(("ssh" "/usr/bin/bash")
-                             ("podman" "/bin/bash"))))
+  (setq vterm-shell (format "%s -l" shell-file-name))
+  (setq vterm-tramp-shells
+        '(("ssh" "/usr/bin/bash")
+          ("sshx" "/usr/bin/bash")
+          ("podman" "/bin/bash"))))
 
 (use-package wgrep
   :ensure t
+  :bind
+  (:map wgrep-mode-map
+        ("C-c +" . #'grep-context-more-around-point)
+        ("C-c -" . #'grep-context-less-around-point))
+
   :config
-  (setq wgrep-auto-save-buffer t))
+  (setq wgrep-auto-save-buffer t)
+
+  (advice-add 'wgrep-change-to-wgrep-mode
+              :after (lambda ()
+                       (when (fboundp 'grep-context-mode)
+                         (grep-context-mode -1))))
+  (advice-add 'wgrep-to-original-mode
+              :after (lambda ()
+                       (when (fboundp 'grep-context-mode)
+                         (grep-context-mode t)))))
 
 (use-package treemacs
   :ensure t
@@ -1097,6 +1195,9 @@ _h_   _l_   _o_k        _y_ank
 
 (use-package magit
   :ensure t
+  ;; :hook
+  ;; (eshell-mode . #'with-editor-export-editor)
+
   :bind
   (
    ("C-c f" . #'magit-file-dispatch)
@@ -1105,12 +1206,34 @@ _h_   _l_   _o_k        _y_ank
    :map ctrl-x-f-map
    ("s" . #'magit-status)
    ("b" . #'magit-blame)
-   ("l" . #'magit-log-buffer-file)
+   ;; ("l" . #'magit-log-buffer-file)
    )
 
   :config
+  (add-hook 'eshell-mode-hook 'with-editor-export-editor)
   (setq magit-auto-revert-mode nil
         magit-last-seen-setup-instructions "1.4.0"))
+(use-package forge
+  :after magit)
+
+(use-package git-link
+  :ensure t
+  :bind
+  (:map ctrl-x-f-map
+        ("l" . #'my/git-link))
+  :config
+  (defun my/git-link (arg)
+    "Call `git-link' with a prefix argument to toggle `git-link-use-commit'."
+    (interactive "P")
+    (let ((git-link-use-commit (if arg
+                                   (not git-link-use-commit)
+                                 git-link-use-commit)))
+      (call-interactively #'git-link))
+    )
+  (setq git-link-use-commit nil)
+  (setq git-link-open-in-browser nil)
+  ;; (setq git-link-default-branch "main")
+  )
 
 (use-package org
   :ensure t
@@ -1202,6 +1325,11 @@ _h_   _l_   _o_k        _y_ank
 
 (use-package eglot
   :after tree-sitter
+  :preface
+  (defface eglot-mutable-face
+    '((t :underline t))
+    "Face for mutable variables.")
+
   :bind
   (:map eglot-mode-map
         ("C-." . eglot-code-actions)
@@ -1219,9 +1347,15 @@ _h_   _l_   _o_k        _y_ank
   :config
   (remove-hook 'rust-mode-hook #'tree-sitter-hl-mode)
 
+  ;; Map the 'mutable' modifier from rust-analyzer to the underline face
+  ;; (add-to-list 'eglot-semantic-token-mappings '(mutable . eglot-mutable-face))
+  (add-to-list 'eglot-semantic-token-types "mutable")
+  (add-to-list 'eglot-semantic-token-modifiers "mutable")
+
   (setq-default eglot-workspace-configuration
                 '(:rust-analyzer
-                  (:cargo (:targetDir "target/rust-analyzer"))))
+                  (:cargo (:targetDir "target/rust-analyzer"
+                                      :allFeatures t))))
   (setq eglot-autoshutdown t)
   (setq eglot-connect-timeout 300)
   ;; Use a pipe, not a pty, for communication with the language server. This can
@@ -1275,6 +1409,8 @@ _h_   _l_   _o_k        _y_ank
   ;;                (when (not (file-remote-p (buffer-file-name)))
   ;;                  (copilot-mode t))))
   (prog-mode . copilot-mode)
+  (yaml-ts-mode . copilot-mode)
+  (toml-ts-mode . copilot-mode)
 
   :bind
   ("C-c p" . #'copilot-mode)
@@ -1306,6 +1442,11 @@ _h_   _l_   _o_k        _y_ank
           :stream t
           :models '(gemini-flash-latest
                     gemini-3.5-flash gemini-3.1-flash-lite)))
+  (setq my/gptel/anthropic-backend
+        (gptel-make-anthropic "Claude"
+          :key (gptel-api-key-from-auth-source "api.anthropic.com")
+          :stream t
+          :models '(claude-sonnet-4-6 claude-opus-4-8)))
   (setq my/gptel/qwen-local-backend
         (gptel-make-openai "vllm-local"
           :host "athena:8888"
@@ -1317,8 +1458,11 @@ _h_   _l_   _o_k        _y_ank
   (setq gptel-default-mode 'org-mode)
 
   :bind
-  (("s-?" . gptel-menu)
-   ("s-i" . gptel)
+  (("s-i" . #'gptel-menu)
+   ("s-I". #'gptel-rewrite)
+   ("s-?" . (lambda ()
+              (interactive)
+              (switch-to-buffer (call-interactively #'gptel))))
    :map gptel-mode-map
    ("s-<return>" . gptel-send))
  )
@@ -1341,11 +1485,22 @@ _h_   _l_   _o_k        _y_ank
   ;; (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
 )
 (use-package tree-sitter-langs
-  :ensure t
+  :preface
+  (defun my/copy-grammars-to-emacs-tree-sitter-dir ()
+    "Copy tree-sitter grammar files to native Emacs dir."
+    (interactive)
+    (let* ((files (directory-files (tree-sitter-langs--bin-dir) nil "\\.dylib$")))
+      (dolist (grammar-file files)
+        (copy-file
+         (concat (tree-sitter-langs--bin-dir) grammar-file)
+         (concat (expand-file-name user-emacs-directory) "tree-sitter/" "libtree-sitter-" grammar-file) t)
+        (message "%s grammar files copied" (length files)))))
+
   :config
   (add-hook 'python-mode-hook #'tree-sitter-hl-mode)
   (add-hook 'rust-mode-hook #'tree-sitter-hl-mode)
-  (add-hook 'c-mode-common-hook #'tree-sitter-hl-mode)
+  (add-hook 'c-mode-hook #'tree-sitter-hl-mode)
+  (add-hook 'c++-mode-hook #'tree-sitter-hl-mode)
   (add-hook 'java-mode-hook #'tree-sitter-hl-mode)
   (add-hook 'shell-mode-hook #'tree-sitter-hl-mode)
   )
@@ -1456,23 +1611,26 @@ current buffer.
 ;; }}}
 
 ;; {{{ modes
-(defun my-prog-mode-hook ()
-  ;; (outline-minor-mode t)
-  (hs-minor-mode t)
-  (whitespace-mode t)
-  (electric-pair-mode t)
-  (flyspell-prog-mode)
-  (setq fill-column 80)
-  (auto-fill-mode -1)
-  (visual-line-mode t)
-  (display-line-numbers-mode t)
-  )
 
 (use-package prog-mode
   :bind
   ;; (:map prog-mode-map
   ;;       ("M-N" . flymake-goto-next-error)
   ;;       ("M-P" . flymake-goto-prev-error))
+
+  :preface
+  (defun my-prog-mode-hook ()
+    ;; (outline-minor-mode t)
+    (hs-minor-mode t)
+    (whitespace-mode t)
+    (electric-pair-mode t)
+    (flyspell-prog-mode)
+    (setq fill-column 80)
+    (auto-fill-mode -1)
+    (visual-line-mode t)
+    (display-line-numbers-mode t)
+    )
+
   :config
   (add-hook 'prog-mode-hook 'my-prog-mode-hook)
 )
@@ -1574,8 +1732,8 @@ current buffer.
   :ensure t)
 (use-package rust-mode
   :ensure t
-  ;; :init
-  ;; (setq rust-mode-treesitter-derive t)
+  :init
+  (setq rust-mode-treesitter-derive t)
 )
 ;; (use-package cargo
 ;;   :ensure t
@@ -1587,8 +1745,8 @@ current buffer.
   :init
   (setq rustic-lsp-client 'eglot)
 )
-(use-package toml-mode
-  :ensure t)
+(use-package toml-ts-mode
+  :mode "\\.toml\\'")
 (use-package hack-mode
   :ensure t
   ;; :config
@@ -1599,20 +1757,34 @@ current buffer.
   :mode
   ("\\.d2\\'". d2-mode))
 
-(use-package typescript-mode
+(use-package typescript-ts-mode
   :ensure t
   :mode
-  ("\\.tsx\\'" . typescript-mode))
+  ("\\.tsx\\'" . typescript-ts-mode))
 
 (use-package thrift
   :mode
   ("\\.thrift\\'" . thrift-mode))
+
+(use-package protobuf-mode
+  :mode
+  ("\\.proto\\'" . protobuf-mode))
+
+(use-package dockerfile-ts-mode
+  :mode
+  (("\\Dockerfile\\'" . dockerfile-ts-mode)
+   ("\\.dockerignore\\'" . dockerfile-ts-mode)))
+
+(use-package go-mode
+  :config
+  (add-hook 'go-mode-hook 'eglot-ensure))
 
 (use-package text-mode
   :preface
   (defun my-text-mode-hook ()
     ;; (auto-fill-mode 1)
     (flyspell-mode 1)
+    (visual-line-mode t)
     (setq require-final-newline nil)
     (modify-syntax-entry ?' ".")
     ;; (setq completion-at-point-functions
@@ -1629,8 +1801,9 @@ current buffer.
   (define-key flyspell-mode-map (kbd "C-,") nil t)
   )
 
-(use-package yaml-mode
-  :ensure t)
+(use-package yaml-ts-mode
+  :ensure t
+  :mode "\\.ya?ml\\'")
 ;; }}}
 
 ;; {{{ Theming
