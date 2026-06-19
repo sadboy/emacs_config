@@ -545,7 +545,8 @@
    ("M-g f" . consult-find)
    ("M-g g" . consult-goto-line)             ;; orig. goto-line
    ("M-g M-g" . consult-goto-line)           ;; orig. goto-line
-   ("M-g o" . consult-outline)               ;; Alternative: consult-org-heading
+   ("M-g o" . consult-outline)
+   ("M-g M-o" . consult-outline)
    ("M-g SPC" . consult-mark)
    ("M-g M-SPC" . consult-mark)
    ("M-g k" . consult-global-mark)
