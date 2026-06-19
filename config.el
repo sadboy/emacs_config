@@ -1353,8 +1353,11 @@ buffers, instead of going through the tramp-managed connection."
         ("M-g M-n" . flymake-goto-next-error)
         ("C-c C-m" . flymake-show-project-diagnostics)
         )
+
   :config
-  (remove-hook 'rust-mode-hook #'tree-sitter-hl-mode)
+  ;; This is required for eglot to receive `mut' variable markers from
+  ;; rust-analyzer:
+  (add-to-list 'eglot-semantic-token-modifiers "mutable")
 
   (setq-default eglot-workspace-configuration
                 '(:rust-analyzer
@@ -1513,12 +1516,12 @@ buffers, instead of going through the tramp-managed connection."
         (message "%s grammar files copied" (length files)))))
 
   :config
-  (add-hook 'python-mode-hook #'tree-sitter-hl-mode)
-  (add-hook 'rust-mode-hook #'tree-sitter-hl-mode)
-  (add-hook 'c-mode-hook #'tree-sitter-hl-mode)
-  (add-hook 'c++-mode-hook #'tree-sitter-hl-mode)
-  (add-hook 'java-mode-hook #'tree-sitter-hl-mode)
-  (add-hook 'shell-mode-hook #'tree-sitter-hl-mode)
+  ;; (add-hook 'python-mode-hook #'tree-sitter-hl-mode)
+  ;; (add-hook 'rust-mode-hook #'tree-sitter-hl-mode)
+  ;; (add-hook 'c-mode-hook #'tree-sitter-hl-mode)
+  ;; (add-hook 'c++-mode-hook #'tree-sitter-hl-mode)
+  ;; (add-hook 'java-mode-hook #'tree-sitter-hl-mode)
+  ;; (add-hook 'shell-mode-hook #'tree-sitter-hl-mode)
   )
 
 (use-package pyvenv
@@ -1729,6 +1732,11 @@ current buffer.
   (add-hook 'python-mode-hook 'my-python-mode-hook)
   )
 
+(use-package java-ts-mode
+  :mode "\\.java\\'"
+  :config
+  (add-hook 'java-ts-mode-hook 'eglot-ensure))
+
 (use-package antlr-mode
   :mode
   ("\\.g4\\'" . antlr-mode))
@@ -1742,10 +1750,10 @@ current buffer.
               (when (fboundp 'symbol-overlay-mode)
                 (symbol-overlay-mode 1)
                 (symbol-overlay-nav-mode 1)))))
-(use-package cython-mode
-  :ensure t)
-(use-package cmake-mode
-  :ensure t)
+
+(use-package cython-mode)
+(use-package cmake-mode)
+
 (use-package rust-mode
   :ensure t
   :init
