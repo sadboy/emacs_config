@@ -171,12 +171,15 @@
 
   :config
   (setq tramp-default-method "ssh")
-  (setq ;;remote-file-name-inhibit-locks t
+  (setq remote-file-name-inhibit-locks t
         tramp-use-scp-direct-remote-copying t
         remote-file-name-inhibit-auto-save-visited t)
   (setq tramp-copy-size-limit (* 1024 1024) ;; 1MB
         tramp-verbose 2)
   (setq enable-remote-dir-locals t)
+
+  ;; Not sure if this makes things better or worse:
+  ;; (setq magit-tramp-pipe-stty-settings 'pty)
 
   ;; Note: vc is required by project.el to find the project root, so can not be
   ;; disabled: (setq vc-ignore-dir-regexp (format "\\(%s\\)\\|\\(%s\\)"
@@ -477,28 +480,27 @@
         ("C-k" . #'kill-line)
         ("RET" . #'vertico-directory-enter) ; Mimics ivy-alt-done for directories
         ("DEL" . #'vertico-directory-delete-char)))
-(use-package vertico-posframe
-  :ensure t
-  :after vertico
-  :config
-  (setq vertico-posframe-border-width 6
-        vertico-posframe-poshandler 'posframe-poshandler-frame-top-center
-        vertico-posframe-parameters '((left-fringe . 8) (right-fringe . 8)))
-  (setq vertico-multiform-commands
-        '(
-          ;; (consult-imenu (:not posframe))
-          (consult-yank-pop (:not posframe))
-          ;; (consult-mark (:not posframe))
-          (t posframe
-             ;; NOTE: This is useful when emacs is used in both in X and
-             ;; terminal, for posframe do not work well in terminal, so
-             ;; vertico-buffer-mode will be used as fallback at the
-             ;; moment.
-             (vertico-posframe-fallback-mode . vertico-buffer-mode))))
-  ;; Automatically enabled by vertico-multiform-mode for commands in
-  ;; vertico-multiform-commands, so no need to enable globally:
-  ;; (vertico-posframe-mode 1)
-)
+;; (use-package vertico-posframe
+;;   :after vertico
+;;   :config
+;;   (setq vertico-posframe-border-width 6
+;;         vertico-posframe-poshandler 'posframe-poshandler-frame-top-center
+;;         vertico-posframe-parameters '((left-fringe . 8) (right-fringe . 8)))
+;;   (setq vertico-multiform-commands
+;;         '(
+;;           ;; (consult-imenu (:not posframe))
+;;           (consult-yank-pop (:not posframe))
+;;           ;; (consult-mark (:not posframe))
+;;           (t posframe
+;;              ;; NOTE: This is useful when emacs is used in both in X and
+;;              ;; terminal, for posframe do not work well in terminal, so
+;;              ;; vertico-buffer-mode will be used as fallback at the
+;;              ;; moment.
+;;              (vertico-posframe-fallback-mode . vertico-buffer-mode))))
+;;   ;; Automatically enabled by vertico-multiform-mode for commands in
+;;   ;; vertico-multiform-commands, so no need to enable globally:
+;;   ;; (vertico-posframe-mode 1)
+;; )
 
 ;; 2. ORDERLESS: Completion style (mimics ivy-re-builders-alist)
 (use-package orderless
@@ -823,6 +825,9 @@
          '("^\\*scratch.*\\*"
            (display-buffer-reuse-window
             display-buffer-same-window))
+         '("^\\*forge: .*\\*"
+           (display-buffer-reuse-window
+            display-buffer-same-window))
 
          ;; transient popup:
          `(,(format "^%s$" (regexp-quote transient--buffer-name))
@@ -1100,6 +1105,7 @@ buffers, instead of going through the tramp-managed connection."
       (pop-to-buffer arg))
      ((and default-directory (file-remote-p default-directory))
       (with-parsed-tramp-file-name default-directory nil
+        (require 'vterm)
         (let* ((remote-shell (or (vterm--tramp-get-shell method) "/bin/bash"))
                (destination (if user (format "%s@%s" user host) host))
                (maybe-port-arg (if port (format "-p %s" port) ""))
@@ -1132,7 +1138,7 @@ buffers, instead of going through the tramp-managed connection."
         (my/vterm))))
 
   :init
-  (add-to-list 'project-switch-commands     '(project-vterm "Vterm") t)
+  (add-to-list 'project-switch-commands     '(my/project-vterm "Vterm") t)
   (add-to-list 'project-kill-buffer-conditions  '(major-mode . vterm-mode))
   :config
   (push '("read-stdin" basic/read-stdin-to-buffer-cmd) vterm-eval-cmds)
@@ -1397,11 +1403,11 @@ buffers, instead of going through the tramp-managed connection."
   ;; Turn it on globally for the headerline
   (breadcrumb-mode 1))
 
-(use-package jarchive
-  :ensure t
-  :after eglot
-  :config
-  (jarchive-setup))
+;; (use-package jarchive
+;;   ;; :ensure t
+;;   :after eglot
+;;   :config
+;;   (jarchive-setup))
 
 (use-package copilot
   ;; :vc (copilot :url "https://github.com/sadboy/copilot.el.git"
@@ -1799,6 +1805,40 @@ current buffer.
   (("\\Dockerfile\\'" . dockerfile-ts-mode)
    ("\\.dockerignore\\'" . dockerfile-ts-mode)))
 
+(use-package sql
+  :mode
+  ("\\.sql\\'" . sql-mode)
+  ("\\.slt\\'" . slt-mode)
+
+  :config
+  (defvar slt-mode-syntax-table
+    (let ((table (make-syntax-table sql-mode-syntax-table)))
+      ;; Redefine '#' as the single-line comment character instead of standard SQL '--'
+      (modify-syntax-entry ?# "<" table)
+      (modify-syntax-entry ?\n ">" table)
+      table)
+    "Syntax table for `slt-mode`.")
+
+  (define-derived-mode slt-mode sql-mode "SQL Logic Test"
+    "Major mode for editing SQLLogicTest (.slt) files."
+    :syntax-table slt-mode-syntax-table
+
+    ;; Configure comments for comment-dwim (M-;)
+    (setq-local comment-start "# ")
+    (setq-local comment-end "")
+    (setq-local comment-start-skip "#+ *"))
+
+  ;; Highlight SLT-specific runner directives
+  (font-lock-add-keywords
+   'slt-mode
+   '(;; Highlighting the directive type: statement, query, skipif, etc.
+     ("^\\(statement\\|query\\|skipif\\|onlyif\\|hash-threshold\\|halt\\)\\>" 1 font-lock-keyword-face)
+     ;; Highlighting expected status: ok, error
+     ("^statement[ \t]+\\(ok\\|error\\)\\>" 1 font-lock-warning-face)
+     ;; Highlight the results block separator (----)
+     ("^----$" . font-lock-preprocessor-face)))
+  )
+
 (use-package go-mode
   :config
   (add-hook 'go-mode-hook 'eglot-ensure))
@@ -1828,6 +1868,9 @@ current buffer.
 (use-package yaml-ts-mode
   :ensure t
   :mode "\\.ya?ml\\'")
+(use-package json-ts-mode
+  :ensure t
+  :mode "\\.json\\'")
 ;; }}}
 
 ;; {{{ Theming
