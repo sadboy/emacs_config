@@ -199,6 +199,20 @@ trying to acquire the rights with sudo (and tramp)"
      (no-delete-other-windows . t)
      (delete-window . basic--maybe-save-state-then-delete))))
 
+(defun basic--main-window-mru-child ()
+  "Return the most recently used child window of the main window, or nil if
+there is none."
+  (let (mru-win)
+    (let ((max-time -1))
+      (walk-window-subtree
+       (lambda (w)
+         (let ((time (window-use-time w)))
+           (when (> time max-time)
+             (setq max-time time
+                   mru-win w))))
+       (window-main-window)))
+    mru-win))
+
 (defun display-buffer--maybe-right-panel (buffer alist)
   "Display BUFFER in the main slot of the right panel of the selected frame
 if the frame is at least `basic/min-frame-width-for-right-panel' columns
@@ -288,6 +302,34 @@ wide. Otherwise, return nil."
    ((eq side 'right) 'right-window-state)
    (t (error "Invalid side %s specified" side))))
 
+(defun basic--find-other-window (direction)
+  "Like `windmove-find-other-window', but understands the difference
+between side panels and main window area."
+  (let ((cur-side (window-parameter (selected-window) 'window-side)))
+    (cond
+     ;; if we're moving into the main window area from a side panel, then select
+     ;; the mru child of the main window
+     ((or
+       (and (eq direction 'up) (eq cur-side 'bottom))
+       (and (eq direction 'down) (eq cur-side 'top))
+       (and (eq direction 'left) (eq cur-side 'right))
+       (and (eq direction 'right) (eq cur-side 'left)))
+      (basic--main-window-mru-child))
+     ;; otherwise, just delegate to the regular `windmove-find-other-window':
+     (t (windmove-find-other-window direction)))))
+
+(defun basic--do-window-select (direction)
+  "Select the window in the given direction"
+  (let ((other-window (basic--find-other-window direction)))
+    (cond
+     ((null other-window)
+      (user-error "No window in this direction"))
+     ((and (window-minibuffer-p other-window)
+           (not (minibuffer-window-active-p other-window)))
+      (user-error "Can not focus an inactive minibuffer"))
+     (t
+      (select-window other-window)))))
+
 (defun basic/buf-move-to (direction)
   "Helper function to move the current buffer to the window in the given
    direction (must be \='up, \='down, \='left or \='right). An error is
@@ -306,12 +348,12 @@ wide. Otherwise, return nil."
                 (set-window-point window point))))
     (let* ((this-window (selected-window))
            (this-window-settings (window-settings this-window))
-           (other-window (windmove-find-other-window direction))
+           (other-window (basic--find-other-window direction))
            (other-window-settings (window-settings other-window)))
       (cond
        ((or (null other-window) (window-minibuffer-p other-window))
         (if (window-parameter this-window 'window-side)
-            (error "No window in this direction")
+            (user-error "No window in this direction")
           (setq other-window
                 (cond
                  ((eq direction 'up)
@@ -322,13 +364,13 @@ wide. Otherwise, return nil."
                   (display-buffer--maybe-left-panel (current-buffer) nil))
                  ((eq direction 'right)
                   (display-buffer--maybe-right-panel (current-buffer) nil))
-                 (t (error "Invalid direction %s specified" direction)))
+                 (t (user-error "Invalid direction %s specified" direction)))
 
                 other-window-settings (window-settings other-window))
           (when (null other-window)
-            (error "Can not create new window in this direction"))))
+            (user-error "Can not create new window in this direction"))))
        ((not (memq (window-dedicated-p other-window) '(nil side)))
-        (error "The window in this direction is dedicated")))
+        (user-error "The window in this direction is dedicated")))
 
       (set-window-settings other-window this-window-settings)
 
@@ -488,6 +530,26 @@ or not enough space to restore it" side))))
 (defun basic/focus-bottom-side-window ()
   (interactive)
   (basic/focus-side-window 'bottom))
+
+;;;###autoload
+(defun basic/focus-window-left ()
+  (interactive)
+  (basic--do-window-select 'left))
+
+;;;###autoload
+(defun basic/focus-window-right ()
+  (interactive)
+  (basic--do-window-select 'right))
+
+;;;###autoload
+(defun basic/focus-window-up ()
+  (interactive)
+  (basic--do-window-select 'up))
+
+;;;###autoload
+(defun basic/focus-window-down ()
+  (interactive)
+  (basic--do-window-select 'down))
 
 ;;;###autoload
 (defun basic/buf-move-up ()

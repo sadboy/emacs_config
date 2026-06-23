@@ -900,10 +900,10 @@
     ;; _F_ollow	   	_S_ave		max_i_mize
     ;; _SPC_ cancel	_1_ only this   	_d_elete	
     ;; "
-    ("h" hydra-move-splitter-left)
-    ("j" hydra-move-splitter-down)
-    ("k" hydra-move-splitter-up)
-    ("l" hydra-move-splitter-right)
+    ("h" basic/focus-window-left)
+    ("j" basic/focus-window-down)
+    ("k" basic/focus-window-up)
+    ("l" basic/focus-window-right)
     ("H" basic/buf-move-left)
     ("J" basic/buf-move-down)
     ("K" basic/buf-move-up)
@@ -1022,14 +1022,14 @@ _h_   _l_   _o_k        _y_ank
   :bind
   (
    ("s-1" . #'basic/focus-left-side-window)
-   ("s-2" . #'basic/focus-top-side-window)
+   ("s-2" . (lambda () (interactive) (select-window (basic--main-window-mru-child))))
    ("s-3" . #'basic/focus-right-side-window)
    ("s-4" . #'basic/focus-bottom-side-window)
 
-   ("s-h" . #'windmove-left)
-   ("s-j" . #'windmove-down)
-   ("s-k" . #'windmove-up)
-   ("s-l" . #'windmove-right)
+   ("s-h" . #'basic/focus-window-left)
+   ("s-j" . #'basic/focus-window-down)
+   ("s-k" . #'basic/focus-window-up)
+   ("s-l" . #'basic/focus-window-right)
    ("s-H" . #'basic/buf-move-left)
    ("s-J" . #'basic/buf-move-down)
    ("s-K" . #'basic/buf-move-up)
@@ -1039,10 +1039,10 @@ _h_   _l_   _o_k        _y_ank
    ("C-s-k" . #'basic/buf-combine-up)
    ("C-s-l" . #'basic/buf-combine-right)
    ;; For terminal:
-   ("<f9>" . #'windmove-left)
-   ("<f10>" . #'windmove-down)
-   ("<f11>" . #'windmove-up)
-   ("<f12>" . #'windmove-right)
+   ("<f9>" . #'basic/focus-window-left)
+   ("<f10>" . #'basic/focus-window-down)
+   ("<f11>" . #'basic/focus-window-up)
+   ("<f12>" . #'basic/focus-window-right)
    ("S-<f9>" . #'basic/buf-move-left)
    ("S-<f10>" . #'basic/buf-move-down)
    ("S-<f11>" . #'basic/buf-move-up)
