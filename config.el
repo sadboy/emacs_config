@@ -553,7 +553,7 @@
   (("C-x b" . consult-buffer)
    ("M-y" . consult-yank-pop)
    ("C-S-g" . consult-ripgrep)
-   ("C-c o" . consult-outline)
+   ;; ("C-c o" . consult-outline)
    ("C-c i" . consult-imenu)
    ("C-c C-m" . consult-flymake)               ;; Alternative: consult-flycheck
 
@@ -1362,19 +1362,20 @@ buffers, instead of going through the tramp-managed connection."
     "Face for mutable variables.")
 
   :bind
-  (:map eglot-mode-map
-        ("C-." . eglot-code-actions)
-        ;; ("C-X" . eglot-momentary-inlay-hints)
-        ("C-:" . eglot-inlay-hints-mode)
-        ("M-R" . xref-find-references)
-        ("M-I" . eglot-find-implementation)
-        ("M-?" . eldoc-doc-buffer)
-        ("M-g M-r" . eglot-rename)
-        ("M-g M-f" . eglot-format)
-        ("M-g M-p" . flymake-goto-prev-error)
-        ("M-g M-n" . flymake-goto-next-error)
-        ("C-c C-m" . flymake-show-project-diagnostics)
-        )
+  (("C-c o" . #'eglot)
+   :map eglot-mode-map
+   ("C-." . eglot-code-actions)
+   ;; ("C-X" . eglot-momentary-inlay-hints)
+   ("C-:" . eglot-inlay-hints-mode)
+   ("M-R" . xref-find-references)
+   ("M-I" . eglot-find-implementation)
+   ("M-?" . eldoc-doc-buffer)
+   ("M-g M-r" . eglot-rename)
+   ("M-g M-f" . eglot-format)
+   ("M-g M-p" . flymake-goto-prev-error)
+   ("M-g M-n" . flymake-goto-next-error)
+   ("C-c C-m" . flymake-show-project-diagnostics)
+   )
 
   :config
   ;; This is required for eglot to receive `mut' variable markers from
@@ -1470,18 +1471,20 @@ buffers, instead of going through the tramp-managed connection."
           :key (gptel-api-key-from-auth-source "api.google.com")
           :stream t
           :models '(gemini-flash-latest
-                    gemini-3.5-flash gemini-3.1-flash-lite)))
+                    gemini-3.5-flash)))
   (setq my/gptel/gemini-search-backend
         (gptel-make-gemini "Gemini-Search"
           :key (gptel-api-key-from-auth-source "api.google.com")
           :stream t
           :request-params '(:tools [(:googleSearch  ())])
           :models '(gemini-flash-latest
-                    gemini-3.5-flash gemini-3.1-flash-lite)))
+                    gemini-3.5-flash)))
   (setq my/gptel/anthropic-backend
         (gptel-make-anthropic "Claude"
           :key (gptel-api-key-from-auth-source "api.anthropic.com")
           :stream t
+          :request-params '(:thinking (:type "enabled" :budget_tokens 2048)
+                    :max_tokens 4096)
           :models '(claude-sonnet-4-6 claude-opus-4-8)))
   (setq my/gptel/deepseek-backend
         (gptel-make-deepseek "DeepSeek"
@@ -1757,7 +1760,8 @@ current buffer.
 (use-package java-ts-mode
   :mode "\\.java\\'"
   :config
-  (add-hook 'java-ts-mode-hook 'eglot-ensure))
+  ;; (add-hook 'java-ts-mode-hook 'eglot-ensure)
+  )
 
 (use-package antlr-mode
   :mode
