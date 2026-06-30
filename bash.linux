@@ -295,8 +295,6 @@ function __env_ps1 () {
     fi;
 }
 
-add_path PATH ${HOME}/bin
-
 case "$TERM" in
     xterm-*color)
         PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[01;33m\]$(__env_ps1 "[%s]")\[\033[00m\]\n\$ '
@@ -315,6 +313,16 @@ if [ "$TERM_PROGRAM" = "vscode" ]; then
     export EDITOR="code --wait"
 else
     export EDITOR="${EMACSCLIENT} ${EDITOR_ARGS}"
+fi
+
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/bin" ] ; then
+    add_path PATH $HOME/bin
+fi
+
+# set PATH so it includes user's private bin if it exists
+if [ -d "$HOME/.local/bin" ] ; then
+    add_path PATH $HOME/.local/bin
 fi
 
 export EMACS_PREFIX
