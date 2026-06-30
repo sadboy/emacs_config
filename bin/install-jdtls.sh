@@ -84,7 +84,7 @@ download_and_extract() {
     local url="$1"
     local tmpdir
     tmpdir="$(mktemp -d)"
-    trap 'rm -rf "${tmpdir}"' RETURN
+    trap "rm -rf \"${tmpdir}\"" RETURN
 
     info "Downloading jdtls from ${url}"
     curl -fSL "${url}" -o "${tmpdir}/jdtls.tar.gz" \
