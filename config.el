@@ -209,7 +209,7 @@
   :init
   (connection-local-set-profile-variables
    'remote-path-with-cargo
-   '((tramp-remote-path . ("~/.cargo/bin" tramp-own-remote-path tramp-default-remote-path))))
+   '((tramp-remote-path . ("~/bin" "~/.cargo/bin" tramp-own-remote-path tramp-default-remote-path))))
 
   :config
   (setq tramp-default-method "rpc")
@@ -1395,6 +1395,15 @@ buffers, instead of going through the tramp-managed connection."
   (setq eglot-code-action-indications '(eldoc-hint))
   )
 
+(use-package eglot-x
+  :vc (:url "https://github.com/nemethf/eglot-x.git")
+  :after eglot
+  :config
+  (eglot-x-setup))
+
+(use-package eglot-java
+  :after eglot)
+
 (use-package imenu
   :config
   (setq imenu-flatten 'annotation))
@@ -1483,8 +1492,8 @@ buffers, instead of going through the tramp-managed connection."
         (gptel-make-anthropic "Claude"
           :key (gptel-api-key-from-auth-source "api.anthropic.com")
           :stream t
-          :request-params '(:thinking (:type "enabled" :budget_tokens 2048)
-                    :max_tokens 4096)
+          ;; :request-params '(:thinking (:type "enabled" :budget_tokens 2048)
+          ;;           :max_tokens 4096)
           :models '(claude-sonnet-4-6 claude-opus-4-8)))
   (setq my/gptel/deepseek-backend
         (gptel-make-deepseek "DeepSeek"
@@ -1510,6 +1519,18 @@ buffers, instead of going through the tramp-managed connection."
    :map gptel-mode-map
    ("s-<return>" . gptel-send))
  )
+
+(use-package agent-shell
+  )
+
+(use-package agent-shell-tramp
+  :vc (:url "https://github.com/junyi-hou/agent-shell-tramp.git")
+  :after agent-shell
+  :config
+  (agent-shell-tramp-mode 1))
+
+;; (use-package opencode
+;;   :vc (:url "https://codeberg.org/sczi/opencode.el.git" :rev :newest))
 
 ;; (use-package dap-mode
 ;;   :ensure t)
