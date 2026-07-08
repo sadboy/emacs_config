@@ -26,6 +26,19 @@
 
 (require 'tramp)
 
+(require 'generic-x)
+
+(define-generic-mode 'stringtemplate-mode
+  '("//" ("/*" . "*/"))                       ; Comment delimiters
+  '("import" "default")                       ; StringTemplate keywords
+  '(("<\\([^> \n]+\\)>" . 'font-lock-variable-name-face)  ; Highlight <attributes>
+    ("\\([a-zA-Z0-9_-]+\\)\\s-*\\(::=\\)"                 ; Highlight template ::= definitions
+     (1 'font-lock-function-name-face)
+     (2 'font-lock-keyword-face)))
+  '("\\.st\\'" "\\.stg\\'")                    ; Associate with .st and .stg files
+  nil
+  "A lightweight major mode for StringTemplate files.")
+
 ;;;###autoload
 (defun bo-add-dir-local-variable ()
   (interactive)
