@@ -1366,7 +1366,7 @@ buffers, instead of going through the tramp-managed connection."
    :map eglot-mode-map
    ("C-." . eglot-code-actions)
    ;; ("C-X" . eglot-momentary-inlay-hints)
-   ("C-:" . eglot-inlay-hints-mode)
+   ("C-c h" . eglot-inlay-hints-mode)
    ("M-R" . xref-find-references)
    ("M-I" . eglot-find-implementation)
    ("M-?" . eldoc-doc-buffer)
@@ -1425,6 +1425,8 @@ buffers, instead of going through the tramp-managed connection."
   ;; (setq imenu-list-auto-resize t)
   )
 (use-package breadcrumb
+  :bind
+  ("C-:" . #'breadcrumb-jump)
   :config
   ;; Turn it on globally for the headerline
   (breadcrumb-mode 1))
@@ -1522,15 +1524,26 @@ buffers, instead of going through the tramp-managed connection."
 
 (use-package agent-shell
   )
-
 (use-package agent-shell-tramp
   :vc (:url "https://github.com/junyi-hou/agent-shell-tramp.git")
   :after agent-shell
   :config
   (agent-shell-tramp-mode 1))
 
+(use-package request
+  :ensure t)
+(use-package emacs-opencode
+  :ensure t
+  :after request
+  :vc (:url "https://github.com/jdormit/emacs-opencode.git")
+  )
+
 ;; (use-package opencode
-;;   :vc (:url "https://codeberg.org/sczi/opencode.el.git" :rev :newest))
+;;   :ensure t
+;;   :vc (:url "https://codeberg.org/sczi/opencode.el.git" :rev :newest)
+;;   :config
+;;   (setq opencode-host "ares")
+;;   )
 
 ;; (use-package dap-mode
 ;;   :ensure t)
@@ -1883,6 +1896,11 @@ current buffer.
 (use-package go-mode
   :config
   (add-hook 'go-mode-hook 'eglot-ensure))
+
+;; (use-package beardbolt
+;;   :vc t
+;;   :load-path "~/emacs/beardbolt/")
+(use-package rmsbolt)
 
 (use-package text-mode
   :preface
