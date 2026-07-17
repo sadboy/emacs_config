@@ -36,7 +36,7 @@ if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
         vterm_printf "51;A$(whoami)@$(hostname):$(pwd)"
     }
 
-    function vterm_cmd() {
+    function emacs_cmd() {
         local vterm_elisp
         vterm_elisp=""
         while [ $# -gt 0 ]; do
@@ -47,7 +47,17 @@ if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
     }
 
     function message() {
-        vterm_cmd message "%s" "$*"
+        emacs_cmd message "%s" "$*"
+    }
+
+elif [[ ${INSIDE_EMACS} == *ghostel* ]] ; then
+
+    function emacs_cmd() {
+        ghostel_cmd $@
+    }
+
+    function message() {
+        emacs_cmd message "%s" "$*"
     }
 fi
 
@@ -134,14 +144,14 @@ function ff() {
         TMP="$(mktemp --tmpdir Reemacsstdin.XXX)";
         cat > "$TMP";
         if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
-            vterm_cmd read-stdin "$(realpath "${TMP}")"
+            emacs_cmd read-stdin "$(realpath "${TMP}")"
         else
             emacsclient ${EDITOR_ARGS} -e "(basic/read-stdin-to-buffer-cmd \"$(realpath "${TMP}")\")"
         fi
 
     else
         if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
-            vterm_cmd basic-find-file "$(realpath "${@:-.}")"
+            emacs_cmd basic-find-file "$(realpath "${@:-.}")"
         else
             emacsclient ${EDITOR_ARGS} "$(realpath "${@:-.}")"
         fi

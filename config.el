@@ -1093,79 +1093,121 @@ _h_   _l_   _o_k        _y_ank
   :bind
   (("C-x W" . w3m)))
 
-(use-package vterm
+;; (use-package vterm
+;;   :bind
+;;   (("C-S-t" . (lambda ()
+;;               (interactive)
+;;               (my/vterm t)))
+;;    ("s-t" . #'my/vterm)
+;;    :map project-prefix-map
+;;    ("t" . my/project-vterm)
+;;    :map vterm-mode-map
+;;    ("C-:" . #'vterm-copy-mode)
+;;    :map vterm-copy-mode-map
+;;    ("C-:" . #'vterm-copy-mode)
+;;    ("q" . #'vterm-copy-mode))
+
+;;   :preface
+;;   (defun my/cycle-vterm-buffers ()
+;;     "Cycle through active vterm buffers."
+;;     )
+
+;;   (defun my/vterm (&optional arg)
+;;     "Wrapper around `vterm' that creates a new ssh connection for remote
+;; buffers, instead of going through the tramp-managed connection."
+;;     (interactive "P")
+;;     (cond
+;;      ((and (stringp arg) (get-buffer arg))
+;;       (pop-to-buffer arg))
+;;      ((and default-directory (file-remote-p default-directory))
+;;       (with-parsed-tramp-file-name default-directory nil
+;;         (require 'vterm)
+;;         (let* ((remote-shell (or (vterm--tramp-get-shell method) "/bin/bash"))
+;;                (destination (if user (format "%s@%s" user host) host))
+;;                (maybe-port-arg (if port (format "-p %s" port) ""))
+;;                (ssh-command
+;;                 (format
+;;                  "ssh -t -o SetEnv=\"LC_INSIDE_EMACS=$INSIDE_EMACS\" %s %s 'cd %s; exec %s'"
+;;                  maybe-port-arg destination localname remote-shell))
+;;                (real-pwd default-directory)
+;;                (default-directory "~/")
+;;                (vterm-shell ssh-command)
+;;                (vterm-buffer-name (format "*vterm@%s*" host)))
+;;           (with-current-buffer (vterm arg)
+;;             (setq-local default-directory real-pwd)))))
+;;      (t
+;;       (vterm arg))))
+
+;;   (defun my/project-vterm ()
+;;     (interactive)
+;;     (defvar vterm-buffer-name)
+;;     (let* ((default-directory (project-root (project-current t)))
+;;            (buffer-name (project-prefixed-buffer-name "vterm")))
+;;       (my/vterm buffer-name)))
+
+;;   (defun my/buffer-vterm ()
+;;     (interactive)
+;;     (let* ((vterm-buffer-name "*vterm*")
+;;            (vterm-buffer (get-buffer vterm-buffer-name)))
+;;       (if vterm-buffer
+;;           (pop-to-buffer vterm-buffer)
+;;         (my/vterm))))
+
+;;   :init
+;;   (add-to-list 'project-switch-commands     '(my/project-vterm "Vterm") t)
+;;   (add-to-list 'project-kill-buffer-conditions  '(major-mode . vterm-mode))
+;;   :config
+;;   (push '("read-stdin" basic/read-stdin-to-buffer-cmd) vterm-eval-cmds)
+;;   (push '("basic-find-file" basic/find-file-on-host-cmd) vterm-eval-cmds)
+;;   (setq vterm-copy-exclude-prompt t)
+;;   (setq vterm-max-scrollback 100000)
+;;   (setq vterm-shell (format "%s -l" shell-file-name))
+;;   (setq vterm-tramp-shells
+;;         '(("ssh" "/usr/bin/bash")
+;;           ("sshx" "/usr/bin/bash")
+;;           ("podman" "/bin/bash"))))
+
+(use-package ghostel
+  :ensure t
   :bind
-  (("C-S-t" . (lambda ()
-              (interactive)
-              (my/vterm t)))
-   ("s-t" . #'my/vterm)
+  (("C-S-t" . ghostel)
+   :map ghostel-semi-char-mode-map
+   ("C-s"  . consult-line)
+   ("M-<backspace>" . ghostel-backward-kill-word)
+   ;; ;; I'm used to go up/down the shell history with M-n/p from eshell
+   ;; ;; Simulate this behavior in ghostel by sending C-p and C-n
+   ("M-p" . (lambda () (interactive) (ghostel-send-key "p" "ctrl")))
+   ("M-n" . (lambda () (interactive) (ghostel-send-key "n" "ctrl")))
    :map project-prefix-map
-   ("t" . my/project-vterm)
-   :map vterm-mode-map
-   ("C-:" . #'vterm-copy-mode)
-   :map vterm-copy-mode-map
-   ("C-:" . #'vterm-copy-mode)
-   ("q" . #'vterm-copy-mode))
+   ("t" . ghostel-project)
+   ("T" . ghostel-project-list-buffers))
 
-  :preface
-  (defun my/cycle-vterm-buffers ()
-    "Cycle through active vterm buffers."
-    )
-
-  (defun my/vterm (&optional arg)
-    "Wrapper around `vterm' that creates a new ssh connection for remote
-buffers, instead of going through the tramp-managed connection."
-    (interactive "P")
-    (cond
-     ((and (stringp arg) (get-buffer arg))
-      (pop-to-buffer arg))
-     ((and default-directory (file-remote-p default-directory))
-      (with-parsed-tramp-file-name default-directory nil
-        (require 'vterm)
-        (let* ((remote-shell (or (vterm--tramp-get-shell method) "/bin/bash"))
-               (destination (if user (format "%s@%s" user host) host))
-               (maybe-port-arg (if port (format "-p %s" port) ""))
-               (ssh-command
-                (format
-                 "ssh -t -o SetEnv=\"LC_INSIDE_EMACS=$INSIDE_EMACS\" %s %s 'cd %s; exec %s'"
-                 maybe-port-arg destination localname remote-shell))
-               (real-pwd default-directory)
-               (default-directory "~/")
-               (vterm-shell ssh-command)
-               (vterm-buffer-name (format "*vterm@%s*" host)))
-          (with-current-buffer (vterm arg)
-            (setq-local default-directory real-pwd)))))
-     (t
-      (vterm arg))))
-
-  (defun my/project-vterm ()
-    (interactive)
-    (defvar vterm-buffer-name)
-    (let* ((default-directory (project-root (project-current t)))
-           (buffer-name (project-prefixed-buffer-name "vterm")))
-      (my/vterm buffer-name)))
-
-  (defun my/buffer-vterm ()
-    (interactive)
-    (let* ((vterm-buffer-name "*vterm*")
-           (vterm-buffer (get-buffer vterm-buffer-name)))
-      (if vterm-buffer
-          (pop-to-buffer vterm-buffer)
-        (my/vterm))))
-
-  :init
-  (add-to-list 'project-switch-commands     '(my/project-vterm "Vterm") t)
-  (add-to-list 'project-kill-buffer-conditions  '(major-mode . vterm-mode))
   :config
-  (push '("read-stdin" basic/read-stdin-to-buffer-cmd) vterm-eval-cmds)
-  (push '("basic-find-file" basic/find-file-on-host-cmd) vterm-eval-cmds)
-  (setq vterm-copy-exclude-prompt t)
-  (setq vterm-max-scrollback 100000)
-  (setq vterm-shell (format "%s -l" shell-file-name))
-  (setq vterm-tramp-shells
-        '(("ssh" "/usr/bin/bash")
-          ("sshx" "/usr/bin/bash")
-          ("podman" "/bin/bash"))))
+  (setq ghostel-tramp-shell-integration t)
+
+  (defun ghostel-send-C-k-and-kill ()
+    "Send `C-k' to ghostel.
+Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
+    (interactive)
+    (kill-ring-save (point) (line-end-position))
+    (ghostel-send-key "k" "ctrl"))
+
+  (add-to-list 'ghostel-tramp-shells '("rpc" login-shell))
+  (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
+  (add-to-list 'project-switch-commands '(ghostel-project-list-buffers "Ghostel buffers") t)
+  (add-to-list 'ghostel-eval-cmds '("magit-status-setup-buffer" magit-status-setup-buffer))
+  (add-to-list 'ghostel-eval-cmds '("read-stdin" basic/read-stdin-to-buffer-cmd))
+  (add-to-list 'ghostel-eval-cmds '("basic-find-file" basic/find-file-on-host-cmd))
+  )
+
+(use-package ghostel-eshell
+  :hook (eshell-load . ghostel-eshell-visual-command-mode))
+
+(use-package ghostel-compile
+  :hook (after-init . ghostel-compile-global-mode))
+
+(use-package ghostel-comint
+  :hook (after-init . ghostel-comint-global-mode))
 
 (use-package wgrep
   :ensure t
