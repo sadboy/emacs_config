@@ -143,14 +143,14 @@ function ff() {
     if [ "x$@" = "x-" ] ; then
         TMP="$(mktemp --tmpdir Reemacsstdin.XXX)";
         cat > "$TMP";
-        if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
+        if [ -n ${INSIDE_EMACS} ] ; then
             emacs_cmd read-stdin "$(realpath "${TMP}")"
         else
             emacsclient ${EDITOR_ARGS} -e "(basic/read-stdin-to-buffer-cmd \"$(realpath "${TMP}")\")"
         fi
 
     else
-        if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
+        if [ -n ${INSIDE_EMACS} ] ; then
             emacs_cmd basic-find-file "$(realpath "${@:-.}")"
         else
             emacsclient ${EDITOR_ARGS} "$(realpath "${@:-.}")"
