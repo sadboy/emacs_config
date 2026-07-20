@@ -137,8 +137,11 @@
 (define-key ctrl-x-comma-map "a" 'apropos)
 (define-key ctrl-x-comma-map "l" 'display-line-numbers-mode)
 
+(defvar ctrl-c-i-map (make-sparse-keymap))
+
 (global-set-key "\C-xi" bo-insert-map)
 (global-set-key "\C-xf" ctrl-x-f-map)
+(global-set-key "\C-ci" ctrl-c-i-map)
 (global-set-key (kbd "C-x ,") ctrl-x-comma-map)
 (global-set-key (kbd "C-S-r") 'revert-buffer)
 
@@ -157,6 +160,7 @@
 (global-set-key (kbd "<f6>") 'revert-buffer)
 (global-set-key (kbd "<f7>") 'previous-buffer)
 (global-set-key (kbd "<f8>") 'next-buffer)
+
 ;; }}}
 
 ;; {{{ Builtin packages:
@@ -235,9 +239,31 @@
    eldoc-echo-area-prefer-doc-buffer 'maybe
    ))
 (use-package project
+  :prefix
+  (defun my/apply-project-vars-by-path ()
+    "Apply buffer-local variables dynamically based on the project path."
+    (when-let* ((proj (project-current))
+                (root (project-root proj))
+                (name (project-name proj)))
+      (cond
+       ;; Case 1: Match any project inside a "Work" directory
+       ;; ((string-match-p "/work/antlr4/" root)
+       ;;  (setq-local user-mail-address "me@company.com")
+       ;;  (setq-local compile-command "npm run test"))
+
+       ;; Case 2: Match a specific project name
+       ((and (string-match-p "antlr4" name)
+             (plistp eglot-workspace-configuration))
+        (setf (plist-get (plist-get eglot-workspace-configuration :rust-analyzer)
+                         :linkedProjects)
+              ["runtime/Rust/Cargo.toml"])))))
+
   :bind
   (:map ctrl-x-f-map
         ("p" . project-find-file))
+
+  :config
+  (add-hook 'hack-local-variables-hook #'my/apply-project-vars-by-path)
   )
 (use-package ffap
   ;; :init
@@ -368,6 +394,17 @@
   :mode
   ("\\.sql\\'" . sql-mode))
 ;; }}}
+
+(use-package expand-region
+  :ensure t
+  :bind
+  ("C-+" . er/expand-region)
+  ("C-_" . er/contract-region)
+  :config
+  (setq expand-region-fast-keys-enabled nil)
+  ;; (setq expand-region-contract-fast-key "-")
+  ;; (setq expand-region-reset-fast-key "0")
+  )
 
 (use-package flx :ensure t)
 (use-package dired-narrow
@@ -554,7 +591,7 @@
    ("M-y" . consult-yank-pop)
    ("C-S-g" . consult-ripgrep)
    ;; ("C-c o" . consult-outline)
-   ("C-c i" . consult-imenu)
+   ;; ("C-c i" . consult-imenu)
    ("C-c C-m" . consult-flymake)               ;; Alternative: consult-flycheck
 
    ;; M-g bindings in `goto-map'
@@ -1171,6 +1208,8 @@ _h_   _l_   _o_k        _y_ank
   :ensure t
   :bind
   (("C-S-t" . ghostel)
+   :map ghostel-mode-map
+   ("C-:" . ghostel-copy-mode)
    :map ghostel-semi-char-mode-map
    ("C-s"  . consult-line)
    ("M-<backspace>" . ghostel-backward-kill-word)
@@ -1405,6 +1444,15 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 
   :bind
   (("C-c o" . #'eglot)
+   ("C-c i i" . #'eglot-find-implementation)
+   ("C-c i e" . #'eglot)
+   ("C-c i k" . #'eglot-shutdown-all)
+   ;; ("C-c i r" . #'eglot-rename)
+   ("C-c i r" . #'eglot-reconnect)
+   ("C-c i a" . #'eglot-code-actions)
+   ("C-c i m" . #'eglot-menu)
+   ("C-c i f" . #'eglot-format-buffer)
+   ("C-c i h" . #'eglot-inlay-hints-mode)
    :map eglot-mode-map
    ("C-." . eglot-code-actions)
    ;; ("C-X" . eglot-momentary-inlay-hints)
@@ -1428,8 +1476,14 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
                 '(:rust-analyzer
                   (:cargo (:targetDir "target/rust-analyzer"
                                       :allFeatures t))))
-  (setq eglot-autoshutdown t)
-  (setq eglot-connect-timeout 300)
+  (setq eglot-autoshutdown t
+        eglot-confirm-server-edits nil
+        eglot-report-progress t
+        eglot-extend-to-xref t
+        eglot-sync-connect 1
+        eglot-connect-timeout 300
+        eglot-autoreconnect t)
+
   ;; Use a pipe, not a pty, for communication with the language server. This can
   ;; help with performance and stability:
   (setq process-connection-type nil)
@@ -1512,6 +1566,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   :config
   (setq
    copilot-indent-offset-warning-disable t
+   copilot-max-char-warning-disable t
    copilot-enable-parentheses-balancer nil)
   )
 
@@ -1572,20 +1627,22 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   :config
   (agent-shell-tramp-mode 1))
 
-(use-package request
-  :ensure t)
-(use-package emacs-opencode
-  :ensure t
-  :after request
-  :vc (:url "https://github.com/jdormit/emacs-opencode.git")
-  )
-
-;; (use-package opencode
+;; (use-package request
+;;   :ensure t)
+;; (use-package emacs-opencode
 ;;   :ensure t
-;;   :vc (:url "https://codeberg.org/sczi/opencode.el.git" :rev :newest)
-;;   :config
-;;   (setq opencode-host "ares")
+;;   :after request
+;;   :vc (:url "https://github.com/jdormit/emacs-opencode.git")
 ;;   )
+
+(use-package opencode
+  :ensure t
+  :vc (:url "https://codeberg.org/sczi/opencode.el.git" :rev :newest)
+  :config
+  (setq opencode-host "ares"
+        opencode-port 34096
+        opencode-auto-start-server nil)
+  )
 
 ;; (use-package dap-mode
 ;;   :ensure t)
@@ -1746,6 +1803,7 @@ current buffer.
     (electric-pair-mode t)
     (flyspell-prog-mode)
     (setq fill-column 80)
+    (setq tab-width 4)
     (auto-fill-mode -1)
     (visual-line-mode t)
     (display-line-numbers-mode t)
