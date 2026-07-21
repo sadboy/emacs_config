@@ -1472,10 +1472,48 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   ;; rust-analyzer:
   (add-to-list 'eglot-semantic-token-modifiers "mutable")
 
-  (setq-default eglot-workspace-configuration
-                '(:rust-analyzer
-                  (:cargo (:targetDir "target/rust-analyzer"
-                                      :allFeatures t))))
+  (setq-default
+   eglot-workspace-configuration
+   '(
+     :metals ( :autoImportBuild "all"
+               :isHttpEnabled t
+               :superMethodLensesEnabled t
+               :showInferredType t
+               :enableSemanticHighlighting t
+               :inlayHints ( :inferredTypes (:enable t )
+                             :implicitArguments (:enable nil)
+                             :implicitConversions (:enable nil )
+                             :typeParameters (:enable t )
+                             :hintsInPatternMatch (:enable nil ))
+               :bloopJvmProperties ["-Xmx4G"])
+     :haskell (:formattingProvider "ormolu")
+     :typescript (:format (:baseIndentSize 0
+                                           :convertTabsToSpaces t
+                                           :indentSize 2
+                                           :semicolons "remove"
+                                           :tabSize 2))
+     :javascript (:format (:baseIndentSize 0
+                                           :convertTabsToSpaces t
+                                           :indentSize 2
+                                           :semicolons "remove"
+                                           :tabSize 2))
+
+     :rust-analyzer (:check (:command "clippy")
+                            :cargo (:targetDir "target/rust-analyzer"
+                                               :allFeatures t
+                                               :buildScripts (:enable t))
+                            :diagnostics (:disabled ["macro-error"])
+                            :procMacro (:enable t))
+     :yaml ( :format (:enable t)
+             :validate t
+             :hover t
+             :completion t
+             :schemas (
+                       https://codeberg.org/jjba23/pop-test/raw/branch/trunk/resources/json-schema/pop-test.json ["golden-test.yaml" "golden-test.yml" "pop-test.yaml" "pop-test.yml"]
+                       https://raw.githubusercontent.com/Vandebron/gh-mpyl/refs/heads/main/src/mpyl/schema/project.schema.yml ["project.yml"]
+                       https://json.schemastore.org/yamllint.json ["/*.yml"])
+             :schemaStore (:enable t))))
+
   (setq eglot-autoshutdown t
         eglot-confirm-server-edits nil
         eglot-report-progress t
