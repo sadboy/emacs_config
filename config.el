@@ -213,7 +213,7 @@
   :init
   (connection-local-set-profile-variables
    'remote-path-with-cargo
-   '((tramp-remote-path . ("~/bin" "~/.cargo/bin" tramp-own-remote-path tramp-default-remote-path))))
+   '((tramp-remote-path . ("~/bin" "~/.cargo/bin" "~/.nvm/versions/node/v24.18.0/bin/" tramp-own-remote-path tramp-default-remote-path))))
 
   :config
   (setq tramp-default-method "rpc")
@@ -239,7 +239,7 @@
    eldoc-echo-area-prefer-doc-buffer 'maybe
    ))
 (use-package project
-  :prefix
+  :preface
   (defun my/apply-project-vars-by-path ()
     "Apply buffer-local variables dynamically based on the project path."
     (when-let* ((proj (project-current))
@@ -407,6 +407,15 @@
   )
 
 (use-package flx :ensure t)
+
+(use-package dired-subtree
+  :ensure t
+  :bind
+  (:map dired-mode-map
+        ("<tab>" . dired-subtree-toggle)
+        ("<backtab>" . dired-subtree-cycle)
+        ("<S-tab>" . dired-subtree-cycle))
+  )
 (use-package dired-narrow
   :ensure t
   :bind
@@ -704,14 +713,16 @@
         "rg --null --line-buffered --color=never --max-columns=1000 --path-separator /\
    --smart-case --no-heading --with-filename --line-number --hidden")
   (consult-customize
-   consult-buffer consult-theme :preview-key '(:debounce 0.2 any)
+   consult-buffer :preview-key "M-."
+   consult-theme :preview-key '(:debounce 0.2 any)
+
    consult-ripgrep consult-git-grep consult-grep consult-man
    consult-bookmark consult-recent-file consult-xref
    consult-source-bookmark consult-source-file-register
    consult-source-recent-file consult-source-project-recent-file
-   ;; :preview-key "M-."
    :preview-key '(:debounce 0.4 any))
   )
+
 (use-package consult-xref-stack
   :vc
   (:url "https://github.com/brett-lempereur/consult-xref-stack" :branch "main")
@@ -872,6 +883,8 @@
   :after hydra transient
   :demand t
   :load-path "~/emacs/config"
+  :hook
+  (stringtemplate-mode . #'my-prog-mode-hook)
   :config
   (setq display-buffer-alist
         (list
@@ -879,6 +892,9 @@
            (display-buffer-reuse-window
             display-buffer-same-window))
          '("^\\*forge: .*\\*"
+           (display-buffer-reuse-window
+            display-buffer-same-window))
+         '("^\\*pi-coding-agent-chat:.*\\*"
            (display-buffer-reuse-window
             display-buffer-same-window))
 
@@ -1348,6 +1364,19 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   :hook
   (org-mode . org-bullets-mode))
 
+(use-package org-present
+  :hook
+  (org-present-mode . (lambda ()
+                 (org-present-big)
+                 (org-display-inline-images)
+                 (org-present-hide-cursor)
+                 (org-present-read-only)))
+  (org-present-mode-quit . (lambda ()
+                      (org-present-small)
+                      (org-remove-inline-images)
+                      (org-present-show-cursor)
+                      (org-present-read-write))))
+
 (use-package markdown-mode
   :ensure t
   :mode
@@ -1371,7 +1400,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   :bind
   (("C-c o" . #'eglot)
    ("C-c i i" . #'eglot-find-implementation)
-   ("C-c i e" . #'eglot)
+   ("C-c i e" . #'eglot-shutdown)
    ("C-c i k" . #'eglot-shutdown-all)
    ;; ("C-c i r" . #'eglot-rename)
    ("C-c i r" . #'eglot-reconnect)
@@ -1608,6 +1637,11 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
         opencode-auto-start-server nil)
   )
 
+(use-package pi-coding-agent
+  :hook
+  (pi-coding-agent-chat-mode . #'buffer-disable-undo)
+)
+
 ;; (use-package dap-mode
 ;;   :ensure t)
 
@@ -1753,26 +1787,26 @@ current buffer.
 
 ;; {{{ modes
 
+(defun my-prog-mode-hook ()
+  ;; (outline-minor-mode t)
+  (hs-minor-mode t)
+  (whitespace-mode t)
+  (electric-pair-mode t)
+  (flyspell-prog-mode)
+  (setq fill-column 80)
+  (setq tab-width 4)
+  (auto-fill-mode -1)
+  (visual-line-mode t)
+  (display-line-numbers-mode t)
+  )
+
 (use-package prog-mode
   :bind
-  ;; (:map prog-mode-map
+  (:map prog-mode-map
+        ;; ("<return>" . #'indent-new-comment-line)
   ;;       ("M-N" . flymake-goto-next-error)
-  ;;       ("M-P" . flymake-goto-prev-error))
-
-  :preface
-  (defun my-prog-mode-hook ()
-    ;; (outline-minor-mode t)
-    (hs-minor-mode t)
-    (whitespace-mode t)
-    (electric-pair-mode t)
-    (flyspell-prog-mode)
-    (setq fill-column 80)
-    (setq tab-width 4)
-    (auto-fill-mode -1)
-    (visual-line-mode t)
-    (display-line-numbers-mode t)
-    )
-
+  ;;       ("M-P" . flymake-goto-prev-error)
+        )
   :config
   (add-hook 'prog-mode-hook 'my-prog-mode-hook)
 )
