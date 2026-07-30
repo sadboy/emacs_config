@@ -1539,42 +1539,42 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 ;;   :config
 ;;   (jarchive-setup))
 
-(use-package copilot
-  ;; :vc (copilot :url "https://github.com/sadboy/copilot.el.git"
-  ;;              ;; Note: move back to official repo once the tramp support PR is
-  ;;              ;; merged:
-  ;;              :branch "feat/tramp")
-  :vc t
-  :load-path "~/emacs/copilot.el/"
+;; (use-package copilot
+;;   ;; :vc (copilot :url "https://github.com/sadboy/copilot.el.git"
+;;   ;;              ;; Note: move back to official repo once the tramp support PR is
+;;   ;;              ;; merged:
+;;   ;;              :branch "feat/tramp")
+;;   :vc t
+;;   :load-path "~/emacs/copilot.el/"
 
-  :hook
-  ;; (prog-mode . (lambda ()
-  ;;                (when (not (file-remote-p (buffer-file-name)))
-  ;;                  (copilot-mode t))))
-  (prog-mode . copilot-mode)
-  (yaml-ts-mode . copilot-mode)
-  (toml-ts-mode . copilot-mode)
+;;   :hook
+;;   ;; (prog-mode . (lambda ()
+;;   ;;                (when (not (file-remote-p (buffer-file-name)))
+;;   ;;                  (copilot-mode t))))
+;;   (prog-mode . copilot-mode)
+;;   (yaml-ts-mode . copilot-mode)
+;;   (toml-ts-mode . copilot-mode)
 
-  :bind
-  ("C-c p" . #'copilot-mode)
+;;   :bind
+;;   ("C-c p" . #'copilot-mode)
 
-  (:map copilot-mode-map
-        ("M-]" . #'copilot-complete))
-  (:map ctrl-x-comma-map
-        ("k" . #'copilot-clear-overlay))
-  (:map copilot-completion-map
-        ("<tab>" . #'copilot-accept-completion-by-line)
-        ("C-<tab>" . #'copilot-accept-completion)
-        ("C-M-f" . #'copilot-accept-completion-by-word)
-        ("M-]" . #'copilot-next-completion)
-        ("M-[" . #'copilot-previous-completion))
+;;   (:map copilot-mode-map
+;;         ("M-]" . #'copilot-complete))
+;;   (:map ctrl-x-comma-map
+;;         ("k" . #'copilot-clear-overlay))
+;;   (:map copilot-completion-map
+;;         ("<tab>" . #'copilot-accept-completion-by-line)
+;;         ("C-<tab>" . #'copilot-accept-completion)
+;;         ("C-M-f" . #'copilot-accept-completion-by-word)
+;;         ("M-]" . #'copilot-next-completion)
+;;         ("M-[" . #'copilot-previous-completion))
 
-  :config
-  (setq
-   copilot-indent-offset-warning-disable t
-   copilot-max-char-warning-disable t
-   copilot-enable-parentheses-balancer nil)
-  )
+;;   :config
+;;   (setq
+;;    copilot-indent-offset-warning-disable t
+;;    copilot-max-char-warning-disable t
+;;    copilot-enable-parentheses-balancer nil)
+;;   )
 
 (use-package gptel
   :ensure t
