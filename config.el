@@ -1633,23 +1633,6 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   :config
   (agent-shell-tramp-mode 1))
 
-;; (use-package request
-;;   :ensure t)
-;; (use-package emacs-opencode
-;;   :ensure t
-;;   :after request
-;;   :vc (:url "https://github.com/jdormit/emacs-opencode.git")
-;;   )
-
-(use-package opencode
-  :ensure t
-  :vc (:url "https://codeberg.org/sczi/opencode.el.git" :rev :newest)
-  :config
-  (setq opencode-host "ares"
-        opencode-port 34096
-        opencode-auto-start-server nil)
-  )
-
 (use-package pi-coding-agent
   :hook
   (pi-coding-agent-chat-mode . #'buffer-disable-undo)
