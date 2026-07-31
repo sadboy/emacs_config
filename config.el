@@ -79,6 +79,7 @@
 
       ;; Dired-mode:
       dired-isearch-filenames 'dwim
+      dired-listing-switches "-alh"
 
       ;; tls verify:
       tls-checktrust t
@@ -897,7 +898,6 @@
   :demand t
   :load-path "~/emacs/config"
   :hook
-  (stringtemplate-mode . #'my-prog-mode-hook)
   :config
   (setq display-buffer-alist
         (list
@@ -1084,6 +1084,8 @@ _h_   _l_   _o_k        _y_ank
     ("x" kill-rectangle nil)
     ("o" nil nil)
     ("q" nil nil))
+
+  (add-hook 'stringtemplate-mode-hook  #'my-prog-mode-hook)
 
   :bind
   (
