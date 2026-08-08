@@ -322,7 +322,7 @@ fi
 if [ "$TERM_PROGRAM" = "vscode" ]; then
     export EDITOR="code --wait"
 else
-    export EDITOR="${EMACSCLIENT} ${EDITOR_ARGS}"
+    export EDITOR="${EMACS}"
 fi
 
 # set PATH so it includes user's private bin if it exists
@@ -335,6 +335,10 @@ if [ -d "$HOME/.local/bin" ] ; then
     add_path PATH $HOME/.local/bin
 fi
 
+if [ -d "$GOPATH" ] ; then
+    add_path PATH $GOPATH
+fi
+
 export EMACS_PREFIX
 export INSIDE_EMACS LC_INSIDE_EMACS
-export PATH INFOPATH GOPATH MYPROJECTS ANDROID_HOME
+export PATH INFOPATH MYPROJECTS ANDROID_HOME

@@ -153,10 +153,10 @@
 (global-set-key (kbd "<C-S-left>")   'basic/buf-move-left)
 (global-set-key (kbd "<C-S-right>")  'basic/buf-move-right)
 
-(global-set-key (kbd "C-<") 'previous-buffer)
-(global-set-key (kbd "C->") 'next-buffer)
-(global-set-key (kbd "C-M-<") 'other-window-history-back)
-(global-set-key (kbd "C-M->") 'other-window-history-forward)
+(global-set-key (kbd "C-S-,") 'previous-buffer)
+(global-set-key (kbd "C-S-.") 'next-buffer)
+(global-set-key (kbd "C-M-S-,") 'other-window-history-back)
+(global-set-key (kbd "C-M-S-.") 'other-window-history-forward)
 ;; For terminal:
 (global-set-key (kbd "<f6>") 'revert-buffer)
 (global-set-key (kbd "<f7>") 'previous-buffer)
@@ -207,6 +207,7 @@
 ;;     (tramp-hlo-setup)
 ;; )
 (use-package tramp-rpc
+  :no-require t
   :after tramp
   :vc (:url "https://github.com/ArthurHeymans/emacs-tramp-rpc"
        :rev :newest
@@ -856,6 +857,11 @@
   ;; Enable corfu-indexed to show numbers (company-show-numbers)
   (corfu-indexed-mode t)
   )
+;; (use-package corfu-terminal
+;;   :config
+;;   ;; Only activate corfu-terminal if we are actually in a TUI session
+;;   (unless (display-graphic-p)
+;;     (corfu-terminal-mode +1)))
 
 ;; Emacs built-in dabbrev configuration (used by Cape/Corfu)
 (use-package dabbrev
@@ -875,7 +881,7 @@
 
 
 (use-package ace-window
-  :ensure t)
+  )
 
 ;; (use-package golden-ratio
 ;;   :ensure t
@@ -1282,6 +1288,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (setq magit-auto-revert-mode nil
         magit-last-seen-setup-instructions "1.4.0"))
 (use-package forge
+  :no-require t
   :after magit)
 
 (use-package git-link
@@ -1304,7 +1311,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   )
 
 (use-package org
-  :ensure t
+  :no-require t
   :bind
   (("C-c l" . #'org-store-link)
   ("C-c a" . #'org-agenda)
@@ -1364,9 +1371,10 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 )
 
 (use-package org-roam
+  :no-require t
   :config
   (setq org-roam-directory (file-truename "~/Notes/roam"))
-  (org-roam-db-autosync-mode t)
+  ;; (org-roam-db-autosync-mode t)
   (setq org-roam-dailies-directory "daily/")
   (setq org-roam-dailies-capture-templates
         `(("d" "default" entry
@@ -1374,11 +1382,12 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
            :if-new (file+head "%<%Y-%m-%d>.org" "#+title: %<%Y-%m-%d>\n\n")))))
 
 (use-package org-bullets
-  :ensure t
+  :no-require t
   :hook
   (org-mode . org-bullets-mode))
 
 (use-package org-present
+  :no-require t
   :hook
   (org-present-mode . (lambda ()
                  (org-present-big)
@@ -1414,10 +1423,11 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   :bind
   (("C-c o" . #'eglot)
    ("C-c i i" . #'eglot-find-implementation)
+   ("C-c i r" . #'xref-find-references)
    ("C-c i e" . #'eglot-shutdown)
    ("C-c i k" . #'eglot-shutdown-all)
    ;; ("C-c i r" . #'eglot-rename)
-   ("C-c i r" . #'eglot-reconnect)
+   ("C-c i S-r" . #'eglot-reconnect)
    ("C-c i a" . #'eglot-code-actions)
    ("C-c i m" . #'eglot-menu)
    ("C-c i f" . #'eglot-format-buffer)
@@ -1426,8 +1436,8 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("C-." . eglot-code-actions)
    ;; ("C-X" . eglot-momentary-inlay-hints)
    ("C-c h" . eglot-inlay-hints-mode)
-   ("M-R" . xref-find-references)
-   ("M-I" . eglot-find-implementation)
+   ("M-S-r" . #'xref-find-references)
+   ("M-S-i" . eglot-find-implementation)
    ("M-?" . eldoc-doc-buffer)
    ("M-g M-r" . eglot-rename)
    ("M-g M-f" . eglot-format)
@@ -1499,12 +1509,14 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   )
 
 (use-package eglot-x
+  :ensure t
   :vc (:url "https://github.com/nemethf/eglot-x.git")
   :after eglot
   :config
   (eglot-x-setup))
 
 (use-package eglot-java
+  :no-require t
   :after eglot)
 
 (use-package imenu
@@ -1528,6 +1540,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   ;; (setq imenu-list-auto-resize t)
   )
 (use-package breadcrumb
+  :no-require t
   :bind
   ("C-:" . #'breadcrumb-jump)
   :config
@@ -1650,18 +1663,18 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 
 ;; Tree sitter is native in Emacs 29
 (use-package tree-sitter
-  :ensure t
   ;; :config
   ;; (require 'tree-sitter-langs)
   ;; (global-tree-sitter-mode)
   ;; (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode)
 )
 (use-package tree-sitter-langs
+  :no-require t
   :preface
   (defun my/copy-grammars-to-emacs-tree-sitter-dir ()
     "Copy tree-sitter grammar files to native Emacs dir."
     (interactive)
-    (let* ((files (directory-files (tree-sitter-langs--bin-dir) nil "\\.dylib$")))
+    (let* ((files (directory-files (tree-sitter-langs--bin-dir) nil "\\.so$")))
       (dolist (grammar-file files)
         (copy-file
          (concat (tree-sitter-langs--bin-dir) grammar-file)
@@ -1676,6 +1689,13 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   ;; (add-hook 'java-mode-hook #'tree-sitter-hl-mode)
   ;; (add-hook 'shell-mode-hook #'tree-sitter-hl-mode)
   )
+;; (use-package treesit-auto
+;;   :ensure t
+;;   :custom
+;;   (treesit-auto-install 'prompt) ; Asks to install missing grammars when opening files
+;;   :config
+;;   (treesit-auto-add-to-auto-mode-alist 'all)
+;;   (global-treesit-auto-mode))
 
 (use-package pyvenv
   :ensure t
@@ -1786,7 +1806,7 @@ current buffer.
 
 (defun my-prog-mode-hook ()
   ;; (outline-minor-mode t)
-  (hs-minor-mode t)
+  ;; (hs-minor-mode t)
   (whitespace-mode t)
   (electric-pair-mode t)
   (flyspell-prog-mode)
@@ -1906,8 +1926,10 @@ current buffer.
                 (symbol-overlay-mode 1)
                 (symbol-overlay-nav-mode 1)))))
 
-(use-package cython-mode)
-(use-package cmake-mode)
+(use-package cython-mode
+  :no-require t)
+(use-package cmake-mode
+  :no-require t)
 
 (use-package rust-mode
   :ensure t
@@ -1927,19 +1949,19 @@ current buffer.
 (use-package toml-ts-mode
   :mode "\\.toml\\'")
 (use-package hack-mode
-  :ensure t
+  :no-require t
   ;; :config
   ;; (add-hook 'hack-mode-hook 'lsp)
   )
 (use-package d2-mode
-  :ensure t
+  :no-require t
   :mode
   ("\\.d2\\'". d2-mode))
 
 (use-package typescript-ts-mode
   :ensure t
   :mode
-  ("\\.tsx\\'" . typescript-ts-mode))
+  ("\\.tsx?\\'" . typescript-ts-mode))
 
 (use-package thrift
   :mode
@@ -1989,13 +2011,15 @@ current buffer.
   )
 
 (use-package go-mode
+  :no-require t
   :config
   (add-hook 'go-mode-hook 'eglot-ensure))
 
 ;; (use-package beardbolt
 ;;   :vc t
 ;;   :load-path "~/emacs/beardbolt/")
-(use-package rmsbolt)
+(use-package rmsbolt
+  :no-require t)
 
 (use-package text-mode
   :preface
