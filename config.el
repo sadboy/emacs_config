@@ -897,7 +897,6 @@
   :after hydra transient
   :demand t
   :load-path "~/emacs/config"
-  :hook
   :config
   (setq display-buffer-alist
         (list
