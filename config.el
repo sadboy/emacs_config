@@ -206,23 +206,23 @@
 ;;     :config
 ;;     (tramp-hlo-setup)
 ;; )
-(use-package tramp-rpc
-  :no-require t
-  :after tramp
-  :vc (:url "https://github.com/ArthurHeymans/emacs-tramp-rpc"
-       :rev :newest
-       :lisp-dir "lisp")
-  :init
-  (connection-local-set-profile-variables
-   'remote-path-with-cargo
-   '((tramp-remote-path . ("~/bin" "~/.cargo/bin" "~/.nvm/versions/node/v24.18.0/bin/" tramp-own-remote-path tramp-default-remote-path))))
+;; (use-package tramp-rpc
+;;   :no-require t
+;;   :after tramp
+;;   :vc (:url "https://github.com/ArthurHeymans/emacs-tramp-rpc"
+;;        :rev :newest
+;;        :lisp-dir "lisp")
+;;   :init
+;;   (connection-local-set-profile-variables
+;;    'remote-path-with-cargo
+;;    '((tramp-remote-path . ("~/bin" "~/.cargo/bin" "~/.nvm/versions/node/v24.18.0/bin/" tramp-own-remote-path tramp-default-remote-path))))
 
-  :config
-  (setq tramp-default-method "rpc")
+;;   :config
+;;   (setq tramp-default-method "rpc")
 
-  (connection-local-set-profiles '(:application tramp :protocol "rpc")
-   'remote-path-with-cargo)
-  )
+;;   (connection-local-set-profiles '(:application tramp :protocol "rpc")
+;;    'remote-path-with-cargo)
+;;   )
 
 (use-package recentf
   :init
