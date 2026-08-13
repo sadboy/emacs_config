@@ -39,6 +39,24 @@
   nil
   "A lightweight major mode for StringTemplate files.")
 
+(define-generic-mode 'asdl-mode
+  '("--")                                      ; Line comment: --
+  '("module" "attributes")                     ; Keywords
+  '(;; Module name:  module Name
+    ("\\_<module[ \t]+\\([A-Za-z_][A-Za-z0-9_]*\\)" (1 'font-lock-constant-face))
+    ;; Type definition:  TypeName =
+    ("^[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)[ \t]*=" (1 'font-lock-type-face))
+    ;; Constructor: first identifier after '=' or '|'
+    ("\\(?:=\\||\\)[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)" (1 'font-lock-function-name-face))
+    ;; Builtin field types
+    ("\\_<\\(identifier\\|int\\|string\\|bytes\\|object\\|constant\\|bool\\)\\_>"
+     . 'font-lock-builtin-face)
+    ;; Field cardinality modifiers (* and ?)
+    ("[?*]" . 'font-lock-keyword-face))
+  '("\\.asdl\\'")                              ; Files: *.asdl
+  nil
+  "A lightweight major mode for Zephyr ASDL files.")
+
 ;;;###autoload
 (defun bo-add-dir-local-variable ()
   (interactive)

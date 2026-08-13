@@ -1091,6 +1091,7 @@ _h_   _l_   _o_k        _y_ank
     ("q" nil nil))
 
   (add-hook 'stringtemplate-mode-hook  #'my-prog-mode-hook)
+  (add-hook 'asdl-mode-hook            #'my-prog-mode-hook)
 
   :bind
   (
