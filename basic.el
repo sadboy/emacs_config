@@ -41,20 +41,26 @@
 
 (define-generic-mode 'asdl-mode
   '("--")                                      ; Line comment: --
-  '("module" "attributes")                     ; Keywords
-  '(;; Module name:  module Name
+  nil                                          ; Keywords are in font-lock list
+  '(;; Section headers
+    ("^[ \t]*\\(module\\|attributes\\)\\_>" . 'font-lock-keyword-face)
+    ;; Module name:  module Name
     ("\\_<module[ \t]+\\([A-Za-z_][A-Za-z0-9_]*\\)" (1 'font-lock-constant-face))
     ;; Type definition:  TypeName =
     ("^[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)[ \t]*=" (1 'font-lock-type-face))
     ;; Constructor: first identifier after '=' or '|'
     ("\\(?:=\\||\\)[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)" (1 'font-lock-function-name-face))
-    ;; Builtin field types
-    ("\\_<\\(identifier\\|int\\|string\\|bytes\\|object\\|constant\\|bool\\)\\_>"
-     . 'font-lock-builtin-face)
+    ;; Field types:  Con(type name, user* names, builtin? opt), also
+    ;; when the fields sit on their own continuation lines.
+    ("\\(?:[,(][ \t\r\n]*\\|^[ \t]+\\)\\([A-Za-z_][A-Za-z0-9_]*\\)[?*]?"
+     (1 (if (member (match-string 1)
+                    '("identifier" "int" "string" "bytes" "object" "constant" "bool"))
+            'font-lock-builtin-face
+          'font-lock-type-face)))
     ;; Field cardinality modifiers (* and ?)
     ("[?*]" . 'font-lock-keyword-face))
   '("\\.asdl\\'")                              ; Files: *.asdl
-  nil
+  '((lambda () (modify-syntax-entry ?* ".")))  ; `*' is punctuation, not a word char
   "A lightweight major mode for Zephyr ASDL files.")
 
 ;;;###autoload
