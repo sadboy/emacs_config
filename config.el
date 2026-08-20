@@ -401,6 +401,7 @@
   :ensure t
   :hook (tty-setup . global-kkp-mode)
   :config
+  (setq xterm-extra-capabilities '(getSelection setSelection modifyOtherKeys))
   ;; (setq kkp-active-enhancements '(disambiguate-escape-codes))
   ;;(setq kkp-alt-modifier 'meta) ;; use this if you want to map the Alt keyboard
                                ;; modifier to Alt in Emacs (and not to Meta)
@@ -409,6 +410,9 @@
   ;; subprocesses" in the README.
   ;; (setq kkp-restore-legacy-keys-around-subprocesses t)
   )
+(use-package clipetty
+  :ensure t
+  :hook (after-init . global-clipetty-mode))
 
 (use-package expand-region
   :ensure t
@@ -1837,7 +1841,7 @@ current buffer.
         ("C-c C-l" . emacs-lisp-byte-compile-and-load)
         ("C-c C-r" . eval-region)
         ("M-?" . describe-symbol)
-        ("M-R" . xref-find-references)
+        ("M-S-r" . xref-find-references)
         )
   :preface
   (defun my-emacs-lisp-mode-hook ()
