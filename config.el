@@ -9,7 +9,7 @@
               major-mode 'text-mode
               indent-tabs-mode nil
               tab-width 8
-              fill-column 76
+              fill-column 80
               default-directory "~/")
 
 (setq switch-to-buffer-obey-display-actions t
