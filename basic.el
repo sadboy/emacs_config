@@ -27,6 +27,7 @@
 (require 'tramp)
 
 (require 'generic-x)
+(require 'imenu)
 
 (define-generic-mode 'stringtemplate-mode
   '("//" ("/*" . "*/"))                       ; Comment delimiters
@@ -60,8 +61,58 @@
     ;; Field cardinality modifiers (* and ?)
     ("[?*]" . 'font-lock-keyword-face))
   '("\\.asdl\\'")                              ; Files: *.asdl
-  '((lambda () (modify-syntax-entry ?* ".")))  ; `*' is punctuation, not a word char
+  '((lambda ()
+      (modify-syntax-entry ?* ".")          ; `*' is punctuation, not a word char
+      (setq-local imenu-create-index-function
+                  #'basic/asdl-imenu-create-index)
+      (add-hook 'after-save-hook #'imenu-flush-cache nil t)
+      (add-hook 'after-revert-hook #'imenu-flush-cache nil t)))
   "A lightweight major mode for Zephyr ASDL files.")
+
+(defun basic/asdl-imenu-create-index ()
+  "Return an imenu index for the current ASDL buffer.
+
+Type definitions (sums and products) become top-level entries;
+the constructors of each definition become sub-entries.
+Matches inside comments are ignored.
+Positions are markers when `imenu-use-markers' is non-nil."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((def-re "^[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)[ \t]*=")
+          (ctor-re "\\(?:=\\||\\)[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)")
+          defs)
+      (while (re-search-forward def-re nil t)
+        (let ((name (match-string-no-properties 1))
+              (def-beg (match-beginning 0)))
+          ;; `syntax-ppss' moves point to POS; keep point at match end.
+          (unless (save-excursion (nth 8 (syntax-ppss (match-beginning 1))))
+            (push (list name (if imenu-use-markers
+                                 (copy-marker def-beg t)
+                               def-beg))
+                  defs))))
+      (setq defs (nreverse defs))
+      (let ((rest defs)
+            index)
+        (while rest
+          (let* ((name (nth 0 (car rest)))
+                 (beg (nth 1 (car rest)))
+                 (end (if (cdr rest) (nth 1 (cadr rest)) (point-max)))
+                 ctors)
+            (goto-char beg)
+            (while (re-search-forward ctor-re end t)
+              (let ((name (match-string-no-properties 1))
+                    (name-beg (match-beginning 1)))
+                (unless (save-excursion (nth 8 (syntax-ppss name-beg)))
+                (push (cons name (if imenu-use-markers
+                                   (copy-marker name-beg t)
+                                 name-beg))
+                      ctors))))
+            (push (if ctors
+                      (cons name (nreverse ctors))
+                    (cons name beg))
+                  index)
+            (setq rest (cdr rest))))
+        (nreverse index)))))
 
 ;;;###autoload
 (defun bo-add-dir-local-variable ()
