@@ -37,7 +37,11 @@
      (1 'font-lock-function-name-face)
      (2 'font-lock-keyword-face)))
   '("\\.st\\'" "\\.stg\\'")                    ; Associate with .st and .stg files
-  nil
+  '((lambda ()
+      (setq-local imenu-create-index-function
+                  #'basic/st-imenu-create-index)
+      (add-hook 'after-save-hook #'imenu-flush-cache nil t)
+      (add-hook 'after-revert-hook #'imenu-flush-cache nil t)))
   "A lightweight major mode for StringTemplate files.")
 
 (define-generic-mode 'asdl-mode
@@ -68,6 +72,43 @@
       (add-hook 'after-save-hook #'imenu-flush-cache nil t)
       (add-hook 'after-revert-hook #'imenu-flush-cache nil t)))
   "A lightweight major mode for Zephyr ASDL files.")
+
+(defun basic/st-imenu-create-index ()
+  "Return an imenu index for the current StringTemplate group buffer.
+
+Template definitions (including dictionaries, aliases, and region
+overrides like @enclosing.region) become index entries.  Formal
+arguments are shown for context, as in \"name(arg1, arg2)\".
+Matches inside comments are ignored.  Positions are markers when
+`imenu-use-markers' is non-nil."
+  (save-excursion
+    (goto-char (point-min))
+    (let ((def-re (concat "^[ \t]*"
+                          "\\(@?[A-Za-z_][A-Za-z0-9_-]*"
+                          "\\(?:\\.[A-Za-z_][A-Za-z0-9_-]*\\)?\\)"
+                          "[ \t]*\\(([^)]*)\\)?"
+                          "[ \t\n]*::="))
+          index)
+      (while (re-search-forward def-re nil t)
+        (let ((name (match-string-no-properties 1))
+              (args (match-string-no-properties 2))
+              (beg (match-beginning 1)))
+          ;; `syntax-ppss' moves point to POS; keep point at match end.
+          (unless (save-excursion (nth 8 (syntax-ppss beg)))
+            (when args
+              (setq args
+                    (mapconcat
+                     (lambda (s)
+                       (replace-regexp-in-string
+                        "\\`[ \t\r\n]+\\|[ \t\r\n]+\\'" "" s))
+                     (split-string (substring args 1 -1) ",")
+                     ", "))
+              (setq name (concat name "(" args ")")))
+            (push (cons name (if imenu-use-markers
+                                 (copy-marker beg t)
+                               beg))
+                  index))))
+      (nreverse index))))
 
 (defun basic/asdl-imenu-create-index ()
   "Return an imenu index for the current ASDL buffer.
