@@ -1799,9 +1799,7 @@ current buffer.
   ("M-s M-r" . symbol-overlay-rename)
   ("M-H" . my-highlight-region-or-symbol)
   :hook
-  (prog-mode . symbol-overlay-mode)
   (text-mode . symbol-overlay-mode)
-  (prog-mode . symbol-overlay-nav-mode)
   (text-mode . symbol-overlay-nav-mode)
   )
 
@@ -1820,6 +1818,9 @@ current buffer.
   (auto-fill-mode -1)
   (visual-line-mode t)
   (display-line-numbers-mode t)
+  (when (fboundp 'symbol-overlay-mode)
+    (symbol-overlay-mode t)
+    (symbol-overlay-nav-mode t))
   )
 
 (use-package prog-mode
