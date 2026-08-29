@@ -27,6 +27,7 @@
 (require 'tramp)
 
 (require 'generic-x)
+(require 'xref)
 (require 'imenu)
 
 (define-generic-mode 'stringtemplate-mode
@@ -57,10 +58,13 @@
       (setq-local font-lock-multiline t)  ; multi-line argument lists
       ;; `"' must not open a string: bodies in <<...>> may hold lone quotes.
       (modify-syntax-entry ?\" ".")
+      (modify-syntax-entry ?< ".")
+      (modify-syntax-entry ?> ".")
       (setq-local imenu-create-index-function
                   #'basic/st-imenu-create-index)
       (add-hook 'after-save-hook #'imenu-flush-cache nil t)
-      (add-hook 'after-revert-hook #'imenu-flush-cache nil t)))
+      (add-hook 'after-revert-hook #'imenu-flush-cache nil t)
+      (add-hook 'xref-backend-functions #'basic/generic-mode-imenu-xref-backend nil t)))
   "A lightweight major mode for StringTemplate files.")
 
 (define-generic-mode 'asdl-mode
@@ -89,7 +93,8 @@
       (setq-local imenu-create-index-function
                   #'basic/asdl-imenu-create-index)
       (add-hook 'after-save-hook #'imenu-flush-cache nil t)
-      (add-hook 'after-revert-hook #'imenu-flush-cache nil t)))
+      (add-hook 'after-revert-hook #'imenu-flush-cache nil t)
+      (add-hook 'xref-backend-functions #'basic/generic-mode-imenu-xref-backend nil t)))
   "A lightweight major mode for Zephyr ASDL files.")
 
 (defun basic/st-imenu-create-index ()
@@ -133,7 +138,9 @@ Matches inside comments are ignored.  Positions are markers when
   "Return an imenu index for the current ASDL buffer.
 
 Type definitions (sums and products) become top-level entries;
-the constructors of each definition become sub-entries.
+the constructors of each definition become sub-entries; the
+definition's own position heads the sub-list, so the type name is
+selectable directly.
 Matches inside comments are ignored.
 Positions are markers when `imenu-use-markers' is non-nil."
   (save-excursion
@@ -168,12 +175,108 @@ Positions are markers when `imenu-use-markers' is non-nil."
                                  name-beg))
                       ctors))))
             (push (if ctors
-                      (cons name (nreverse ctors))
+                      (cons name (cons (cons name beg)
+                                       (nreverse ctors)))
                     (cons name beg))
                   index)
             (setq rest (cdr rest))))
         (nreverse index)))))
 
+;;; Xref backend driven by the imenu index
+;;;
+;;; Enabled globally, after `etags': etags keeps priority in buffers with
+;;; a TAGS table; wherever etags declines, the imenu index steps in.
+;;; The generic modes above add the same function buffer-locally, so
+;;; there the imenu index wins even over etags.
+
+(defun basic/imenu-xref-backend ()
+  "Return the imenu-based xref backend when the buffer has imenu support."
+  (and (or imenu-generic-expression
+           imenu-extract-index-name-function
+           (not (eq imenu-create-index-function
+                    #'imenu-default-create-index-function)))
+       'basic/imenu))
+
+;; Appended, so a configured TAGS table keeps priority over the imenu
+;; index; buffer-local backends (eglot, elisp-mode) still run first via
+;; their local hook value.
+(add-hook 'xref-backend-functions #'basic/imenu-xref-backend 'append)
+
+(defun basic/generic-mode-imenu-xref-backend ()
+  "Like `basic/imenu-xref-backend', as a distinct function symbol.
+
+The generic modes install this buffer-locally.  A function present
+in both the local and the global hook value runs only at its global
+position, after `etags'; the separate symbol avoids that and keeps
+the imenu index first in these modes even when a TAGS table is
+configured."
+  (basic/imenu-xref-backend))
+
+(defun basic/imenu--flatten-index (alist &optional prefix)
+  "Flatten imenu ALIST into a list of (PATH LEAF POSITION) entries.
+
+PATH is the fully qualified entry name (dotted with PREFIX for
+sub-entries), LEAF is the entry's own name, and POSITION is the
+marker or integer recorded in the index.  A subalist may start
+with its own (NAME . POSITION) entry; it keeps the unqualified
+path."
+  (apply #'append
+         (mapcar
+          (lambda (item)
+            (let ((name (car item))
+                  (rest (cdr item)))
+              (if (imenu--subalist-p item)
+                  (let* ((base (if prefix (concat prefix "." name) name))
+                        (self (and (consp (car rest)) (atom (cdar rest))
+                                   (equal (caar rest) name)
+                                   (list (list base name (cdar rest))))))
+                    (append self
+                            (basic/imenu--flatten-index
+                             (if self (cdr rest) rest) base)))
+                (list (list (if prefix (concat prefix "." name) name)
+                            name
+                            rest)))))
+          alist)))
+
+(defun basic/imenu--entry-match-p (path leaf identifier)
+  "Return non-nil if PATH or LEAF is a definition of IDENTIFIER."
+  (let* ((base (if (string-match "\\s-*(\\([^)]*\\))\\'" leaf)
+                   (substring leaf 0 (match-beginning 0))
+                 leaf))
+         (bare (if (string-prefix-p "@" base) (substring base 1) base)))
+    (or (string= identifier leaf)
+        (string= identifier path)
+        (string= identifier base)
+        (string= identifier bare)
+        ;; Region override: @expr.primary matches `primary'.
+        (string-suffix-p (concat "." identifier) bare))))
+
+(defun basic/imenu--index-entries ()
+  "Return the flattened entries of the current buffer's imenu index."
+  (basic/imenu--flatten-index
+   (assoc-delete-all "*Rescan*" (imenu--make-index-alist))))
+(cl-defmethod xref-backend-definitions ((_backend (eql basic/imenu)) identifier)
+  "Find IDENTIFIER among the entries of the current buffer's imenu index."
+  (when (buffer-file-name)
+    (let ((xrefs nil))
+      (dolist (entry (basic/imenu--index-entries))
+        (let ((path (nth 0 entry))
+              (leaf (nth 1 entry))
+              (pos (nth 2 entry)))
+          (when (basic/imenu--entry-match-p path leaf identifier)
+            (push (xref-make path
+                             (xref-make-file-location
+                              (buffer-file-name)
+                              (line-number-at-pos pos)
+                              (save-excursion (goto-char pos)
+                                              (- pos (line-beginning-position)))))
+                  xrefs))))
+      (nreverse xrefs))))
+
+(cl-defmethod xref-backend-identifier-completion-table ((_backend (eql basic/imenu)))
+  "Complete against all entry names in the current buffer's imenu index."
+  (let ((entries (basic/imenu--index-entries)))
+    (delete-dups (append (mapcar #'car entries) (mapcar #'cadr entries)))))
 ;;;###autoload
 (defun bo-add-dir-local-variable ()
   (interactive)
