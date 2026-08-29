@@ -30,14 +30,33 @@
 (require 'imenu)
 
 (define-generic-mode 'stringtemplate-mode
-  '("//" ("/*" . "*/"))                       ; Comment delimiters
-  '("import" "default")                       ; StringTemplate keywords
-  '(("<\\([^> \n]+\\)>" . 'font-lock-variable-name-face)  ; Highlight <attributes>
-    ("\\([a-zA-Z0-9_-]+\\)\\s-*\\(::=\\)"                 ; Highlight template ::= definitions
+  '("//" ("/*" . "*/") ("<!" . "!>"))         ; Comment delimiters
+  '("default" "delimiters" "group" "import")  ; StringTemplate keywords
+  '(;; Dictionary definitions:  name ::= [ ... ]
+    ("\\_<\\([A-Za-z_][A-Za-z0-9_.-]*\\)\\_>[ \t]*::=[ \t]*\\["
+     (1 'font-lock-constant-face))
+    ;; Definition names (templates, aliases, region overrides like
+    ;; @tmpl.region): the name contrasts with the body that follows.
+    ("^[ \t]*\\(@?[A-Za-z_][A-Za-z0-9_.-]*\\)[ \t]*\\((\\([^)]*\\))\\)?[ \t]*\\(::=\\)"
      (1 'font-lock-function-name-face)
-     (2 'font-lock-keyword-face)))
+     (3 'font-lock-variable-name-face nil t)
+     (4 'font-lock-keyword-face))
+    ;; Header group name:  group Name;
+    ("\\_<group\\_>\\s-+\\([A-Za-z_][A-Za-z0-9_.-]*\\)"
+     (1 'font-lock-constant-face))
+    ;; Conditional subtemplates:  <if(x)> ... <elseif(y)> ... <endif>
+    ("[^\\]<\\s-*\\(if\\|elseif\\|else\\|endif\\)\\_>" (1 'font-lock-keyword-face))
+    ;; Attribute expressions:  <name>, <a:b()>, <x; separator=", ">.  Comes
+    ;; before strings so expressions with embedded quotes stay intact.
+    ("[^\\]<\\([^<>%>\" \t\n][^>\n]*\\)>" (1 'font-lock-variable-name-face))
+    ;; String literals, including expression-free single-line bodies.  Text
+    ;; stays on one line so an unpaired quote cannot swallow the next line.
+    ("\"[^\"\\\n]*\\(?:\\\\.[^\"\\\n]*\\)*\"" . 'font-lock-string-face))
   '("\\.st\\'" "\\.stg\\'")                    ; Associate with .st and .stg files
   '((lambda ()
+      (setq-local font-lock-multiline t)  ; multi-line argument lists
+      ;; `"' must not open a string: bodies in <<...>> may hold lone quotes.
+      (modify-syntax-entry ?\" ".")
       (setq-local imenu-create-index-function
                   #'basic/st-imenu-create-index)
       (add-hook 'after-save-hook #'imenu-flush-cache nil t)
