@@ -242,23 +242,31 @@
    ))
 (use-package project
   :preface
+  (defvar my/apply-project-vars--inhibit nil
+    "Non-nil while `my/apply-project-vars-by-path' runs.
+TRAMP connection setup applies connection-local variables through
+`hack-local-variables-hook'; without this guard, `project-current'
+re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
+
   (defun my/apply-project-vars-by-path ()
     "Apply buffer-local variables dynamically based on the project path."
-    (when-let* ((proj (project-current))
-                (root (project-root proj))
-                (name (project-name proj)))
-      (cond
-       ;; Case 1: Match any project inside a "Work" directory
-       ;; ((string-match-p "/work/antlr4/" root)
-       ;;  (setq-local user-mail-address "me@company.com")
-       ;;  (setq-local compile-command "npm run test"))
+    (unless my/apply-project-vars--inhibit
+      (let ((my/apply-project-vars--inhibit t))
+        (when-let* ((proj (project-current))
+                    (root (project-root proj))
+                    (name (project-name proj)))
+          (cond
+           ;; Case 1: Match any project inside a "Work" directory
+           ;; ((string-match-p "/work/antlr4/" root)
+           ;;  (setq-local user-mail-address "me@company.com")
+           ;;  (setq-local compile-command "npm run test"))
 
-       ;; Case 2: Match a specific project name
-       ((and (string-match-p "antlr4" name)
-             (plistp eglot-workspace-configuration))
-        (setf (plist-get (plist-get eglot-workspace-configuration :rust-analyzer)
-                         :linkedProjects)
-              ["runtime/Rust/Cargo.toml"])))))
+           ;; Case 2: Match a specific project name
+           ((and (string-match-p "antlr4" name)
+                 (plistp eglot-workspace-configuration))
+            (setf (plist-get (plist-get eglot-workspace-configuration :rust-analyzer)
+                             :linkedProjects)
+                  ["runtime/Rust/Cargo.toml"])))))))
 
   :bind
   (:map ctrl-x-f-map
