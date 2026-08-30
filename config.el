@@ -404,7 +404,7 @@
   (setq xterm-extra-capabilities '(getSelection setSelection modifyOtherKeys))
   ;; (setq kkp-active-enhancements '(disambiguate-escape-codes))
   ;;(setq kkp-alt-modifier 'meta) ;; use this if you want to map the Alt keyboard
-                               ;; modifier to Alt in Emacs (and not to Meta)
+  ;; modifier to Alt in Emacs (and not to Meta)
 
   ;; For C-g aborting blocking subprocesses, see "C-g and blocking
   ;; subprocesses" in the README.
@@ -421,7 +421,6 @@
       (?6 . ?^) (?7 . ?&) (?8 . ?*) (?9 . ?\() (?0 . ?\))
       (?- . ?_) (?= . ?+) (?\[ . ?{) (?\] . ?}) (?\\ . ?|)
       (?\; . ?:) (?' . ?\") (?, . ?<) (?. . ?>) (?/ . ??)
-      (?h . ?H) (?j . ?J) (?k . ?K) (?l . ?L) (?r . ?R) (?i . ?I)
       )
     "Unshifted and shifted characters on a US layout.")
 
@@ -431,10 +430,19 @@
       (dolist (pair my/shift-fold-pairs)
         (define-key key-translation-map
                     (kbd (format "%s-S-%c" mod (car pair)))
-                    (kbd (format "%s-%c" mod (cdr pair)))))))
+                    (kbd (format "%s-%c" mod (cdr pair))))))
+    ;; Super+Shift plus a letter: window systems fold Shift into the
+    ;; upper-case letter ("s-H"), but the terminal reports "s-S-h".
+    ;; Do not fold "C-S-<letter>" or "M-S-<letter>": there "C-A" is the
+    ;; same event as "C-a", so folding would change the meaning.
+    (dolist (letter (number-sequence ?a ?z))
+      (define-key key-translation-map
+                  (kbd (format "s-S-%c" letter))
+                  (kbd (format "s-%c" (upcase letter))))))
 
-  (my/setup-shift-folding)
+  (add-hook 'kkp-terminal-setup-complete-hook #'my/setup-shift-folding)
   )
+
 (use-package clipetty
   :ensure t
   :hook (after-init . global-clipetty-mode))
@@ -1462,13 +1470,14 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("C-c i m" . #'eglot-menu)
    ("C-c i f" . #'eglot-format-buffer)
    ("C-c i h" . #'eglot-inlay-hints-mode)
+   ("M-R" . xref-find-references)
+   ("M-?" . eldoc-doc-buffer)
+
    :map eglot-mode-map
    ("C-." . eglot-code-actions)
    ;; ("C-X" . eglot-momentary-inlay-hints)
    ("C-c h" . eglot-inlay-hints-mode)
-   ("M-R" . xref-find-references)
    ("M-I" . eglot-find-implementation)
-   ("M-?" . eldoc-doc-buffer)
    ("M-g M-r" . eglot-rename)
    ("M-g M-f" . eglot-format)
    ("M-g M-p" . flymake-goto-prev-error)
