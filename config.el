@@ -153,10 +153,10 @@
 (global-set-key (kbd "<C-S-left>")   'basic/buf-move-left)
 (global-set-key (kbd "<C-S-right>")  'basic/buf-move-right)
 
-(global-set-key (kbd "C-S-,") 'previous-buffer)
-(global-set-key (kbd "C-S-.") 'next-buffer)
-(global-set-key (kbd "C-M-S-,") 'other-window-history-back)
-(global-set-key (kbd "C-M-S-.") 'other-window-history-forward)
+(global-set-key (kbd "C-<")   'previous-buffer)
+(global-set-key (kbd "C->")   'next-buffer)
+(global-set-key (kbd "C-M-<") 'other-window-history-back)
+(global-set-key (kbd "C-M->") 'other-window-history-forward)
 ;; For terminal:
 (global-set-key (kbd "<f6>") 'revert-buffer)
 (global-set-key (kbd "<f7>") 'previous-buffer)
@@ -409,6 +409,31 @@
   ;; For C-g aborting blocking subprocesses, see "C-g and blocking
   ;; subprocesses" in the README.
   ;; (setq kkp-restore-legacy-keys-around-subprocesses t)
+
+  ;; Ghostty on macOS does not report the shifted key for Ctrl+Shift plus a
+  ;; punctuation key.  It sends "CSI 46;6u" (= "C-S-.") instead of
+  ;; "CSI 46:62;6u" (= "C->").  Fold Shift into the shifted character in
+  ;; `key-translation-map', so one binding works on window systems and on
+  ;; terminals.  This is a no-op on window systems.  When the terminal sends
+  ;; the shifted key, kkp already produces "C->" and no "C-S-." event occurs.
+  (defconst my/shift-fold-pairs
+    '((?` . ?~) (?1 . ?!) (?2 . ?@) (?3 . ?#) (?4 . ?$) (?5 . ?%)
+      (?6 . ?^) (?7 . ?&) (?8 . ?*) (?9 . ?\() (?0 . ?\))
+      (?- . ?_) (?= . ?+) (?\[ . ?{) (?\] . ?}) (?\\ . ?|)
+      (?\; . ?:) (?' . ?\") (?, . ?<) (?. . ?>) (?/ . ??)
+      (?h . ?H) (?j . ?J) (?k . ?K) (?l . ?L) (?r . ?R) (?i . ?I)
+      )
+    "Unshifted and shifted characters on a US layout.")
+
+  (defun my/setup-shift-folding ()
+    "Translate, for example, \"C-S-.\" to \"C->\" in `key-translation-map'."
+    (dolist (mod '("C" "M" "C-M" "s" "C-s"))
+      (dolist (pair my/shift-fold-pairs)
+        (define-key key-translation-map
+                    (kbd (format "%s-S-%c" mod (car pair)))
+                    (kbd (format "%s-%c" mod (cdr pair)))))))
+
+  (my/setup-shift-folding)
   )
 (use-package clipetty
   :ensure t
@@ -1108,10 +1133,10 @@ _h_   _l_   _o_k        _y_ank
    ("s-j" . #'basic/focus-window-down)
    ("s-k" . #'basic/focus-window-up)
    ("s-l" . #'basic/focus-window-right)
-   ("s-S-h" . #'basic/buf-move-left)
-   ("s-S-j" . #'basic/buf-move-down)
-   ("s-S-k" . #'basic/buf-move-up)
-   ("s-S-l" . #'basic/buf-move-right)
+   ("s-H" . #'basic/buf-move-left)
+   ("s-J" . #'basic/buf-move-down)
+   ("s-K" . #'basic/buf-move-up)
+   ("s-L" . #'basic/buf-move-right)
    ("C-s-h" . #'basic/buf-combine-left)
    ("C-s-j" . #'basic/buf-combine-down)
    ("C-s-k" . #'basic/buf-combine-up)
@@ -1441,8 +1466,8 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("C-." . eglot-code-actions)
    ;; ("C-X" . eglot-momentary-inlay-hints)
    ("C-c h" . eglot-inlay-hints-mode)
-   ("M-S-r" . #'xref-find-references)
-   ("M-S-i" . eglot-find-implementation)
+   ("M-R" . xref-find-references)
+   ("M-I" . eglot-find-implementation)
    ("M-?" . eldoc-doc-buffer)
    ("M-g M-r" . eglot-rename)
    ("M-g M-f" . eglot-format)
