@@ -24,7 +24,7 @@
 
 ;;; Code:
 
-(require 'tramp)
+(eval-when-compile (require 'tramp))
 
 (require 'generic-x)
 (require 'xref)
