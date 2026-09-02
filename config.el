@@ -1686,13 +1686,13 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("s-<return>" . gptel-send))
  )
 
-(use-package agent-shell
-  )
-(use-package agent-shell-tramp
-  :vc (:url "https://github.com/junyi-hou/agent-shell-tramp.git")
-  :after agent-shell
-  :config
-  (agent-shell-tramp-mode 1))
+;; (use-package agent-shell
+;;   )
+;; (use-package agent-shell-tramp
+;;   :vc (:url "https://github.com/junyi-hou/agent-shell-tramp.git")
+;;   :after agent-shell
+;;   :config
+;;   (agent-shell-tramp-mode 1))
 
 (use-package pi-coding-agent
   :hook
