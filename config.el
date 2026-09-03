@@ -449,6 +449,28 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
                   (kbd (format "s-%c" (upcase letter))))))
 
   (add-hook 'kkp-terminal-setup-complete-hook #'my/setup-shift-folding)
+
+  ;; When a keymap binds "M-[", Emacs resolves the ambiguous CSI intro
+  ;; "ESC [" as that key immediately, instead of waiting for the rest
+  ;; of the escape sequence.  Any active "M-[" binding (minuet's
+  ;; active map, for example) then breaks kkp decoding of all CSI
+  ;; sequences: "M-]", "M-[", "M-i", and even arrows.  Install a
+  ;; complete decoder at "\e[" so `input-decode-map' outranks that
+  ;; shortcut: digit or letter payloads go to kkp's translator, other
+  ;; payloads are re-emitted unchanged (legacy CSI such as arrows).
+  (defun my/kkp-fix-open-bracket ()
+    "Reinstall a clean CSI dispatcher at \"\\e[\" for kkp."
+    (when (and (fboundp 'kkp--process-keys)
+               (kkp--active-p (kkp--selected-terminal)))
+      (define-key input-decode-map "\e["
+                  (lambda (_prompt)
+                    (let ((first (read-event)))
+                      (if (or (and (>= first ?0) (<= first ?9))
+                              (and (>= first ?A) (<= first ?Z)))
+                          (kkp--process-keys first)
+                        ;; Legacy CSI payload; re-emit the consumed events.
+                        (vconcat [?\e ?\[] (list first))))))))
+  (add-hook 'kkp-terminal-setup-complete-hook #'my/kkp-fix-open-bracket)
   )
 
 (use-package clipetty
@@ -1656,13 +1678,13 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   :bind
   ;; The `minuet-active-mode-map' keys apply only while a suggestion
   ;; overlay is visible in the buffer.
-  (("M-I" . #'minuet-show-suggestion)
-   ("M-g M-/" . #'minuet-complete-with-minibuffer)
+  (("M-]". #'minuet-show-suggestion)
+   ("M-I" . #'minuet-complete-with-minibuffer)
    ("C-c m" . #'minuet-configure-provider)
    :map minuet-active-mode-map
    ("C-g" . #'minuet-dismiss-suggestion)
-   ("M-n" . #'minuet-next-suggestion)
-   ("M-p" . #'minuet-previous-suggestion)
+   ("M-]" . #'minuet-next-suggestion)
+   ("M-[" . #'minuet-previous-suggestion)
    ("C-<tab>" . #'minuet-accept-suggestion)
    ("M-a" . #'minuet-accept-suggestion)
    ("M-e" . #'minuet-accept-suggestion)
@@ -1683,6 +1705,18 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (minuet-set-optional-options minuet-openai-fim-compatible-options
                                :top_p 0.9)
   (setq minuet-request-timeout 2.5)
+
+  ;; `minor-mode-map-alist' precedence follows library load order, so
+  ;; e.g. `symbol-overlay-nav-mode-map' can shadow the M-n/M-p cycling
+  ;; keys.  Install the map in `minor-mode-overriding-map-alist', which
+  ;; takes precedence over all of `minor-mode-map-alist', while a
+  ;; suggestion is visible.
+  (defun my/minuet-keymap-precedence ()
+    "Give `minuet-active-mode-map' precedence over other minor mode maps."
+    (setq minor-mode-overriding-map-alist
+          (when minuet-active-mode
+            `((minuet-active-mode . ,minuet-active-mode-map)))))
+  (add-hook 'minuet-active-mode-hook #'my/minuet-keymap-precedence)
  )
 
 (use-package gptel
