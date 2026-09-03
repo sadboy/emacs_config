@@ -1637,6 +1637,54 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 ;;    copilot-enable-parentheses-balancer nil)
 ;;   )
 
+(use-package minuet
+  :ensure t
+  :preface
+  (defun my/minuet-deepseek-api-key ()
+    "Return the DeepSeek API key from `auth-source'."
+    (when-let* ((secret
+                 (plist-get
+                  (car (auth-source-search
+                        :host "api.deepseek.com"
+                        :user "apikey"
+                        :require '(:secret)))
+                  :secret)))
+      (if (functionp secret)
+          (encode-coding-string (funcall secret) 'utf-8)
+        secret)))
+
+  :bind
+  ;; The `minuet-active-mode-map' keys apply only while a suggestion
+  ;; overlay is visible in the buffer.
+  (("M-I" . #'minuet-show-suggestion)
+   ("M-g M-/" . #'minuet-complete-with-minibuffer)
+   ("C-c m" . #'minuet-configure-provider)
+   :map minuet-active-mode-map
+   ("C-g" . #'minuet-dismiss-suggestion)
+   ("M-n" . #'minuet-next-suggestion)
+   ("M-p" . #'minuet-previous-suggestion)
+   ("C-<tab>" . #'minuet-accept-suggestion)
+   ("M-a" . #'minuet-accept-suggestion)
+   ("M-e" . #'minuet-accept-suggestion)
+   ("<tab>" . #'minuet-accept-suggestion-line)
+   ("C-M-f" . #'minuet-accept-suggestion-word))
+
+  :config
+  ;; DeepSeek FIM via the beta completions endpoint.
+  (setq minuet-provider 'openai-fim-compatible)
+  (plist-put minuet-openai-fim-compatible-options
+             :end-point "https://api.deepseek.com/beta/completions")
+  (plist-put minuet-openai-fim-compatible-options
+             :model "deepseek-v4-flash")
+  (plist-put minuet-openai-fim-compatible-options
+             :api-key #'my/minuet-deepseek-api-key)
+  (minuet-set-optional-options minuet-openai-fim-compatible-options
+                               :max_tokens 96)
+  (minuet-set-optional-options minuet-openai-fim-compatible-options
+                               :top_p 0.9)
+  (setq minuet-request-timeout 2.5)
+ )
+
 (use-package gptel
   :ensure t
   :config
