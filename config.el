@@ -480,12 +480,15 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
 (use-package expand-region
   :ensure t
   :bind
-  ("C-+" . er/expand-region)
-  ("C-_" . er/contract-region)
+  ;; ("C-+" . #'er/expand-region)
+  ;; ("C-_" . #'er/contract-region)
+  ("M-s ." . #'er/expand-region)
+  ("M-s ," . #'er/contract-region)
   :config
-  (setq expand-region-fast-keys-enabled nil)
-  ;; (setq expand-region-contract-fast-key "-")
-  ;; (setq expand-region-reset-fast-key "0")
+  (setq expand-region-fast-keys-enabled t)
+  (setq expand-region-contract-fast-key ",")
+  (setq expand-region-expand-fast-key ".")
+  (setq expand-region-reset-fast-key "0")
   )
 
 (use-package flx :ensure t)
@@ -1835,9 +1838,6 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 
 (use-package symbol-overlay
   :ensure t
-  ;; :straight (symbol-overlay
-  ;;            :fork (:host github
-  ;;                         :repo "sadboy/symbol-overlay"))
   :vc (:url "https://github.com/sadboy/symbol-overlay.git")
 
   :init
@@ -1853,12 +1853,14 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 
   (setq symbol-overlay-inhibit-map t)
   (defhydra symbol-hydra (global-map "M-s")
-    ("i" symbol-overlay-put)
-    ("h" symbol-overlay-map-help)
+    ("h" symbol-overlay-put)
+    ("?" symbol-overlay-map-help)
     ("p" symbol-overlay-jump-prev)
     ("n" symbol-overlay-jump-next)
     ("<" symbol-overlay-jump-first)
     (">" symbol-overlay-jump-last)
+    ;; ("." #'er/expand-region)
+    ;; ("," #'er/contract-region)
     ("t" symbol-overlay-toggle-in-scope)
     ("e" symbol-overlay-echo-mark)
     ("M-." symbol-overlay-jump-to-definition)
