@@ -1473,8 +1473,8 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (("C-c o" . #'eglot)
    ("C-c i i" . #'eglot-find-implementation)
    ("C-c i r" . #'xref-find-references)
-   ("C-c i e" . #'eglot-shutdown)
-   ("C-c i k" . #'eglot-shutdown-all)
+   ("C-c i k" . #'eglot-shutdown)
+   ("C-c i K" . #'eglot-shutdown-all)
    ;; ("C-c i r" . #'eglot-rename)
    ("C-c i S-r" . #'eglot-reconnect)
    ("C-c i a" . #'eglot-code-actions)
@@ -1488,7 +1488,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("C-." . eglot-code-actions)
    ;; ("C-X" . eglot-momentary-inlay-hints)
    ("C-c h" . eglot-inlay-hints-mode)
-   ("M-I" . eglot-find-implementation)
+   ("M-g I" . eglot-find-implementation)
    ("M-g M-r" . eglot-rename)
    ("M-g M-f" . eglot-format)
    ("M-g M-p" . flymake-goto-prev-error)
@@ -1660,7 +1660,8 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   ;; The `minuet-active-mode-map' keys apply only while a suggestion
   ;; overlay is visible in the buffer.
   (("M-I". #'minuet-show-suggestion)
-   ("M-s M-i" . #'minuet-complete-with-minibuffer)
+   ("M-s M-i". #'minuet-show-suggestion)
+   ("M-s M-/" . #'minuet-complete-with-minibuffer)
    ("C-c m" . #'minuet-configure-provider)
    :map minuet-active-mode-map
    ("C-g" . #'minuet-dismiss-suggestion)
