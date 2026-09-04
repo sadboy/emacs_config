@@ -50,7 +50,9 @@ if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
         emacs_cmd message "%s" "$*"
     }
 
-elif [[ ${INSIDE_EMACS} == *ghostel* ]] ; then
+elif [[ ${INSIDE_EMACS} == *ghostel* || "$TERM" = 'xterm-ghostty' ]] ; then
+
+    source ~/.local/share/ghostel/ghostel.bash
 
     function emacs_cmd() {
         ghostel_cmd $@
