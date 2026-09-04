@@ -642,14 +642,25 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
   (setq read-file-name-completion-ignore-case t)
   (setq read-buffer-completion-ignore-case t)
   )
-(use-package hotfuzz
+(use-package fussy
   :ensure t
   :config
-  (setq completion-styles '(hotfuzz orderless basic)
-        ;; completion-ignore-case t
-        ;; hotfuzz-max-needle-len 5
-        ;; hotfuzz-max-highlighted-completions 10
-        ))
+  (fussy-setup)
+  (setq completion-styles '(fussy orderless basic)
+        ;; Filter with the C-implemented `all-completions' (fastest), then
+        ;; score the filtered subset with flx:
+        fussy-filter-fn 'fussy-filter-default
+        fussy-use-cache t))
+
+;; The flx algorithm implemented as a Rust dynamic module, about 10x faster
+;; than the Emacs Lisp implementation.  Not on MELPA; the repository ships
+;; prebuilt modules in bin/, so a :vc install is sufficient.  Caveat: it
+;; does not use flx's file cache, so filename scoring is slightly worse.
+;; (use-package flx-rs
+;;   :vc (:url "https://github.com/jcs-elpa/flx-rs" :rev :newest)
+;;   :config
+;;   (flx-rs-load-dyn)
+;;   (setq fussy-score-fn 'fussy-flx-rs-score))
 
 ;; 3. MARGINALIA: Rich annotations in minibuffer (mimics ivy-rich)
 (use-package marginalia
