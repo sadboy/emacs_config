@@ -197,7 +197,10 @@
    '(:application tramp :protocol "scp")
    'remote-direct-async-process)
 
-  (add-to-list 'tramp-connection-properties (list "/\\(ssh\\|scp\\):" "direct-async" t))
+  ;; Do NOT set the "direct-async" connection property to t here: it
+  ;; overrides the ssh/scp method's `tramp-direct-async' parameter
+  ;; ("-t" "-t"), so direct-async processes would run without a remote pty
+  ;; (breaks job control for pty spawns like ghostel).
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
   )
 ;; Note: this actually makes things worse (and breaks project.el as well):
@@ -1233,7 +1236,7 @@ _h_   _l_   _o_k        _y_ank
    ("T" . ghostel-project-list-buffers))
 
   :config
-  (setq ghostel-tramp-shell-integration t)
+  (setq ghostel-tramp-shell-integration nil)
 
   (defun ghostel-send-C-k-and-kill ()
     "Send `C-k' to ghostel.
@@ -1242,7 +1245,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
     (kill-ring-save (point) (line-end-position))
     (ghostel-send-key "k" "ctrl"))
 
-  (add-to-list 'ghostel-tramp-shells '("rpc" login-shell))
+  ;; (add-to-list 'ghostel-tramp-shells '("rpc" login-shell))
   (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
   (add-to-list 'project-switch-commands '(ghostel-project-list-buffers "Ghostel buffers") t)
   (add-to-list 'ghostel-eval-cmds '("magit-status-setup-buffer" magit-status-setup-buffer))
