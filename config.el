@@ -1496,7 +1496,8 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("M-g M-f" . eglot-format)
    ("M-g M-p" . flymake-goto-prev-error)
    ("M-g M-n" . flymake-goto-next-error)
-   ("C-c C-m" . flymake-show-project-diagnostics)
+   ;; Superceded by `consult-flymake':
+   ;; ("C-c C-m" . flymake-show-project-diagnostics)
    )
 
   :config
