@@ -180,9 +180,6 @@
         tramp-verbose 2)
   (setq enable-remote-dir-locals t)
 
-  ;; Not sure if this makes things better or worse:
-  ;; (setq magit-tramp-pipe-stty-settings 'pty)
-
   ;; Note: vc is required by project.el to find the project root, so can not be
   ;; disabled: (setq vc-ignore-dir-regexp (format "\\(%s\\)\\|\\(%s\\)"
   ;; vc-ignore-dir-regexp tramp-file-name-regexp))
@@ -1266,7 +1263,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   ("M-M" . minimap-mode))
 
 (use-package all-the-icons :ensure t)
-(use-package all-the-icons-gnus :ensure t)
+;; (use-package all-the-icons-gnus :ensure t)
 
 (use-package solaire-mode
   :ensure t
@@ -1302,9 +1299,12 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    )
 
   :config
+  (setq magit-tramp-pipe-stty-settings 'pty)
+
   (add-hook 'eshell-mode-hook 'with-editor-export-editor)
   (setq magit-auto-revert-mode nil
         magit-last-seen-setup-instructions "1.4.0"))
+
 (use-package forge
   :no-require t
   :after magit)
