@@ -170,9 +170,6 @@
   (connection-local-set-profile-variables
    'remote-direct-async-process
    '((tramp-direct-async-process . t)))
-  (connection-local-set-profile-variables
-   'remote-vterm-profile
-   '((shell-file-name . "/bin/bash")))
 
   :config
   (setq tramp-default-method "ssh")
@@ -584,14 +581,6 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
   (:map isearch-mode-map
         ("C-'" . avy-isearch)))
 
-;; Here is a modern Vertico, Orderless, Marginalia, and Consult (often called the "McClim" or "Minad" stack) configuration that mimics your Ivy/Counsel/Swiper setup.
-;; ### Key Differences & Equivalents:
-;; * **`ivy-mode`** $\rightarrow$ **`vertico-mode`**
-;; * **`ivy-rich`** $\rightarrow$ **`marginalia-mode`** (provides rich metadata next to commands/files).
-;; * **`swiper`** $\rightarrow$ **`consult-line`** (performs live buffer searching; automatically picks up active isearch queries).
-;; * **`counsel-rg`** $\rightarrow$ **`consult-ripgrep`**.
-;; * **`ivy-call` / `ivy-hydra`** $\rightarrow$ **`embark-act`** (bound to `C-M-m` to perform context-aware actions on candidates without closing the minibuffer).
-
 ;; Recursive minibuffers (mimics Ivy setting)
 (setq enable-recursive-minibuffers t)
 
@@ -837,38 +826,6 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
   (setq vundo-glyph-alist vundo-unicode-symbols
         vundo-window-side 'top))
 
-;; (use-package company
-;;   :ensure t
-;;   :vc (:url "https://github.com/sadboy/company-mode.git"
-;;             :branch "own-master")
-;;   :bind
-;;   ("M-/" . company-other-backend)
-;;   :config
-;;   (setq company-idle-delay nil
-;;         company-tooltip-align-annotations t
-;;         company-show-numbers t
-;;         company-require-match nil
-;;         company-auto-commit t
-;;         company-tooltip-idle-delay .2
-;;         company-dabbrev-char-regexp "[[:word:]-_]"
-;;         company-dabbrev-ignore-case t
-;;         company-dabbrev-downcase nil
-;;         company-dabbrev-code-ignore-case t
-;;         company-dabbrev-code-other-buffers 'all
-;;         company-dabbrev-code-everywhere t
-;;         company-dabbrev-time-limit .2
-;;         company-dabbrev-code-time-limit .2)
-;;   (global-company-mode t))
-
-
-;; Here is the equivalent setup using **Corfu** and **Cape** (which provides the
-;; Dabbrev backend and Capf extensions).
-
-;; ### Key Mapping Notes:
-;; 1. **`company-idle-delay nil`**: Mapped to `(corfu-auto nil)`. Completion is manually triggered via `M-/` (`completion-at-point`).
-;; 2. **`company-show-numbers`**: Achieved by enabling the built-in `corfu-indexed-mode`.
-;; 3. **Dabbrev settings**: Corfu uses Emacs's native `dabbrev` library under the hood (via `cape-dabbrev`), so `company-dabbrev-*` variables are mapped to their native Emacs `dabbrev-*` equivalents.
-
 (use-package corfu
   :ensure t
   :bind
@@ -941,9 +898,7 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
   ;; Add dabbrev to the default completion-at-point-functions
   (add-to-list 'completion-at-point-functions #'cape-dabbrev))
 
-
-(use-package ace-window
-  )
+(use-package ace-window)
 
 ;; (use-package golden-ratio
 ;;   :ensure t
