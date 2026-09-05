@@ -196,6 +196,22 @@
   ;; ("-t" "-t"), so direct-async processes would run without a remote pty
   ;; (breaks job control for pty spawns like ghostel).
   (add-to-list 'tramp-remote-path 'tramp-own-remote-path)
+
+  ;; The ssh/scp methods prepend "-t" "-t" to direct-async ssh commands,
+  ;; so direct-async processes always run on a remote pty.  A pty echoes the
+  ;; input back and translates newlines, which corrupts the JSON-RPC stream
+  ;; of pipe-based processes: Eglot then dies with "Server exited with
+  ;; status 1" over tramp.  Also, Eglot's remote stderr reader (cat of a
+  ;; fifo) stalls when run on a pty, which blocks the server start.  So
+  ;; keep direct-async for pty processes (ghostel) only; pipes use the
+  ;; regular tramp make-process.
+  (define-advice tramp-direct-async-process-p
+      (:around (orig-fun &rest args) direct-async-only-for-ptys)
+    (let* ((plist (if (keywordp (car args)) args (car args)))
+           (connection-type
+            (or (plist-get plist :connection-type) process-connection-type)))
+      (and (memq connection-type '(pty t))
+           (apply orig-fun args))))
   )
 ;; Note: this actually makes things worse (and breaks project.el as well):
 ;; (use-package tramp-hlo
@@ -1432,7 +1448,6 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (which-key-mode t))
 
 (use-package eglot
-  :after tree-sitter
   :preface
   (defface eglot-semantic-mutable
     '((t :underline t))
