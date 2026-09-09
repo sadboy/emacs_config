@@ -64,6 +64,23 @@
   :load-path "~/emacs/config"
 )
 
+(use-package tramp-rpc
+  :after tramp
+  :vc (:url "https://github.com/ArthurHeymans/emacs-tramp-rpc"
+       :rev "89eb93ecd97bae5625a701adabca4d540d0bbfaf"
+       :lisp-dir "lisp")
+  :init
+  (connection-local-set-profile-variables
+   'remote-path-with-cargo
+   '((tramp-remote-path . ("~/bin" "~/.cargo/bin" "~/.local/bin/" tramp-own-remote-path tramp-default-remote-path))))
+
+  :config
+  ;; (setq tramp-default-method "rpc")
+
+  (connection-local-set-profiles '(:application tramp :protocol "rpc")
+   'remote-path-with-cargo)
+  )
+
 (use-package doom-themes
   :config
   (load-theme 'doom-one t))

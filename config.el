@@ -224,23 +224,6 @@
 ;;     :config
 ;;     (tramp-hlo-setup)
 ;; )
-;; (use-package tramp-rpc
-;;   :no-require t
-;;   :after tramp
-;;   :vc (:url "https://github.com/ArthurHeymans/emacs-tramp-rpc"
-;;        :rev :newest
-;;        :lisp-dir "lisp")
-;;   :init
-;;   (connection-local-set-profile-variables
-;;    'remote-path-with-cargo
-;;    '((tramp-remote-path . ("~/bin" "~/.cargo/bin" "~/.nvm/versions/node/v24.18.0/bin/" tramp-own-remote-path tramp-default-remote-path))))
-
-;;   :config
-;;   (setq tramp-default-method "rpc")
-
-;;   (connection-local-set-profiles '(:application tramp :protocol "rpc")
-;;    'remote-path-with-cargo)
-;;   )
 
 (use-package recentf
   :init
@@ -1229,7 +1212,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
     (kill-ring-save (point) (line-end-position))
     (ghostel-send-key "k" "ctrl"))
 
-  ;; (add-to-list 'ghostel-tramp-shells '("rpc" login-shell))
+  (add-to-list 'ghostel-tramp-shells '("rpc" login-shell))
   (add-to-list 'project-switch-commands '(ghostel-project "Ghostel") t)
   (add-to-list 'project-switch-commands '(ghostel-project-list-buffers "Ghostel buffers") t)
   (add-to-list 'ghostel-eval-cmds '("magit-status-setup-buffer" magit-status-setup-buffer))
@@ -2166,7 +2149,7 @@ current buffer.
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
         doom-themes-enable-italic t) ; if nil, italics is universally disabled
   (setq doom-one-brighter-comments t
-        doom-one-brighter-modeline nil)
+        doom-one-brighter-modeline t)
   ;; (load-theme 'doom-one t)
 
   ;; Enable flashing mode-line on errors
