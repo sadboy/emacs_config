@@ -605,7 +605,8 @@ between side panels and main window area."
            (other-window-settings (window-settings other-window)))
       (cond
        ((or (null other-window) (window-minibuffer-p other-window))
-        (if (window-parameter this-window 'window-side)
+        (if (or (window-parameter this-window 'window-side)
+                (eq basic-buffer-move-behavior 'combine))
             (user-error "No window in this direction")
           (setq other-window
                 (cond
