@@ -682,8 +682,9 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
    ("M-g M-SPC" . consult-mark)
    ("M-g k" . consult-global-mark)
    ("M-g i" . consult-imenu)
-   ("M-g M-i" . consult-imenu-multi)
-   ("M-g I" . consult-eglot-symbols)
+   ("M-g M-i" . consult-imenu)
+   ("M-g I" . consult-imenu-multi)
+   ("M-g w" . consult-eglot-symbols)
 
    ;; M-s bindings in `search-map'
    ("M-s d" . consult-find)                  ;; Alternative: consult-fd
@@ -1460,7 +1461,6 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("C-." . eglot-code-actions)
    ;; ("C-X" . eglot-momentary-inlay-hints)
    ("C-c h" . eglot-inlay-hints-mode)
-   ("M-g I" . eglot-find-implementation)
    ("M-g M-r" . eglot-rename)
    ("M-g M-f" . eglot-format)
    ("M-g M-p" . flymake-goto-prev-error)
