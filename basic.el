@@ -464,7 +464,7 @@ there is none."
        (window-main-window)))
     mru-win))
 
-(defun display-buffer--maybe-right-panel (buffer alist)
+(defun display-buffer--maybe-right-panel (buffer _alist)
   "Display BUFFER in the main slot of the right panel of the selected frame
 if the frame is at least `basic/min-frame-width-for-right-panel' columns
  wide. Otherwise, return nil."
@@ -480,7 +480,7 @@ if the frame is at least `basic/min-frame-width-for-right-panel' columns
           (window-width . 80)
           ,@basic--side-window-additional-parameters))))
 
-(defun display-buffer--maybe-bottom-panel (buffer alist)
+(defun display-buffer--maybe-bottom-panel (buffer _alist)
   "Display BUFFER in the bottom panel of the selected frame if the frame is
 at least `basic/min-frame-height-for-bottom-panel' lines tall.
 Otherwise, return nil."
@@ -495,7 +495,7 @@ Otherwise, return nil."
           (window-height . 0.25)
           ,@basic--side-window-additional-parameters))))
 
-(defun display-buffer--maybe-left-panel (buffer alist)
+(defun display-buffer--maybe-left-panel (buffer _alist)
   "Display BUFFER in the main slot of the left panel of the selected frame
 if the frame is at least `basic/min-frame-width-for-left-panel' columns
 wide. Otherwise, return nil."
@@ -511,7 +511,7 @@ wide. Otherwise, return nil."
           (window-width . 60)
           ,@basic--side-window-additional-parameters))))
 
-(defun display-buffer--maybe-left-panel-lower (buffer alist)
+(defun display-buffer--maybe-left-panel-lower (buffer _alist)
   "Display BUFFER in the top slot of the left panel of the selected frame
 if the frame is at least `basic/min-frame-width-for-right-panel' columns
 wide. Otherwise, return nil."
@@ -528,14 +528,16 @@ wide. Otherwise, return nil."
           ,@basic--side-window-additional-parameters))))
 
 (defvar basic-buffer-move-behavior 'swap
-  "If set to 'swap (default), the buffers will be exchanged
-  (i.e. swapped), if set to 'move, the current window is switch back to the
-  previously displayed buffer (i.e. the buffer is moved)."
-)
+  "How `basic/buf-move-to' moves a buffer to another window.
+The value is `swap' (the default), `move', `combine' or `dup'.
+`swap' exchanges the buffers of the two windows.  `move' switches the
+current window back to the previously displayed buffer.  `combine'
+deletes the current window after the move.  `dup' leaves the source
+window unchanged, so the buffer appears in both windows.")
 
 (defun basic--direction-to-side (direction)
-  "Convert a direction (`'up', `'down', `'left' or `'right') to the
-   corresponding window side (must be 'top, 'bottom, 'left or 'right)."
+  "Convert a direction (`up', `down', `left' or `right') to the
+   corresponding window side (`top', `bottom', `left' or `right')."
   (cond
    ((eq direction 'up) 'top)
    ((eq direction 'down) 'bottom)
@@ -544,7 +546,7 @@ wide. Otherwise, return nil."
    (t (error "Invalid direction %s specified" direction))))
 
 (defun basic--side-to-state-key (side)
-  "Convert a window side (must be 'top, 'bottom, 'left or 'right) to the
+  "Convert a window side (`top', `bottom', `left' or `right') to the
    corresponding frame parameter key for saving the window state."
   (cond
    ((eq side 'top) 'top-window-state)
@@ -906,9 +908,7 @@ or not enough space to restore it" side))))
       (shrink-window arg)
     (enlarge-window arg)))
 
-(eval-when-compile
-  (require 'rect)
-  (defvar rectangle-mark-mode))
+(require 'rect)
 
 ;;;###autoload
 (defun hydra-ex-point-mark ()
