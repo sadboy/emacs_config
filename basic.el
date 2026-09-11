@@ -608,13 +608,13 @@ between side panels and main window area."
           (setq other-window
                 (cond
                  ((eq direction 'up)
-                  nil)
+                  (split-window this-window nil 'above))
                  ((eq direction 'down)
-                  (display-buffer--maybe-bottom-panel (current-buffer) nil))
+                  (split-window this-window nil 'below))
                  ((eq direction 'left)
-                  (display-buffer--maybe-left-panel (current-buffer) nil))
+                  (split-window this-window nil 'left))
                  ((eq direction 'right)
-                  (display-buffer--maybe-right-panel (current-buffer) nil))
+                  (split-window this-window nil 'right))
                  (t (user-error "Invalid direction %s specified" direction)))
 
                 other-window-settings (window-settings other-window))
