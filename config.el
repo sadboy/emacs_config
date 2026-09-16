@@ -1533,7 +1533,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 
 (use-package eglot-x
   :ensure t
-  :vc (:url "https://github.com/nemethf/eglot-x.git")
+  :vc (:url "git@github.com:sadboy/eglot-x.git")
   :after eglot
   :config
   (eglot-x-setup))
