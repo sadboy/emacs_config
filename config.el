@@ -34,6 +34,7 @@
       sentence-end-without-space "。，？！；……"
       sentence-end-double-space nil
       default-input-method "TeX"
+      scroll-error-top-bottom t
 
       view-read-only t                  ; Open read-only files in view mode
       visible-bell nil
