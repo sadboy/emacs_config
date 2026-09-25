@@ -1302,9 +1302,21 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("s" . #'magit-status)
    ("b" . #'magit-blame)
    ;; ("l" . #'magit-log-buffer-file)
+
+   :map magit-diff-section-map
+   ("C-j" . #'my/magit-diff-visit-worktree-file)
+   ("C-<return>" . #'my/magit-diff-visit-worktree-file)
+   ("<remap> <magit-visit-thing>" . #'my/magit-diff-visit-file)
    )
 
   :config
+  (defun my/magit-diff-visit-worktree-file ()
+    (interactive)
+    (magit-diff-visit-worktree-file #'display-buffer))
+  (defun my/magit-diff-visit-file ()
+    (interactive)
+    (magit-diff-visit-file #'display-buffer))
+
   (setq magit-tramp-pipe-stty-settings 'pty)
 
   (add-hook 'eshell-mode-hook 'with-editor-export-editor)
