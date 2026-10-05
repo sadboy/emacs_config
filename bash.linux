@@ -338,7 +338,7 @@ if [ -d "$HOME/.local/bin" ] ; then
 fi
 
 if [ -d "$GOPATH" ] ; then
-    add_path PATH $GOPATH
+    add_path PATH $GOPATH/bin
 fi
 
 export EMACS_PREFIX
