@@ -460,8 +460,8 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
 (use-package expand-region
   :ensure t
   :bind
-  ;; ("C-+" . #'er/expand-region)
-  ;; ("C-_" . #'er/contract-region)
+  ("C-+" . #'er/expand-region)
+  ("C-_" . #'er/contract-region)
   ("M-s ." . #'er/expand-region)
   ("M-s ," . #'er/contract-region)
   :config
