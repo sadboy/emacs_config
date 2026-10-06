@@ -2151,6 +2151,11 @@ current buffer.
 (use-package json-ts-mode
   :ensure t
   :mode "\\.json\\'")
+(use-package jinja2-plain
+  :load-path "~/emacs/config"
+  :demand t
+  :mode (("\\.j2\\'" . jinja2-plain-mode)
+         ("\\.jinja2?\\'" . jinja2-plain-mode)))
 ;; }}}
 
 ;; {{{ Theming
