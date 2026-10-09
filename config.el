@@ -87,6 +87,7 @@
 
       browse-url-browser-function 'eww
       )
+
 (add-hook 'comint-output-filter-functions 'comint-truncate-buffer)
 
 (global-set-key "\C-xQ" 'save-buffers-kill-emacs)
@@ -748,6 +749,41 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
     (interactive)
     (consult-line (thing-at-point 'symbol t)))
 
+  (defun my/consult-imenu--default (pos)
+    "Return the Imenu item at or before POS in the current buffer."
+    (let (item-name item-pos)
+      (dolist (item (consult-imenu--items-safe) item-name)
+        (let* ((mark (if (consp (cdr item)) (cadr item) (cdr item)))
+               (num (if (markerp mark) (marker-position mark) mark)))
+          (when (and (integerp num)
+                     (or (not (markerp mark))
+                         (eq (marker-buffer mark) (current-buffer)))
+                     (<= num pos)
+                     (or (not item-pos) (> num item-pos)))
+            (setq item-name (car item)
+                  item-pos num))))))
+
+  (defvar my/consult-imenu--origin nil
+    "Buffer and point before `consult-imenu', or nil.")
+
+  (defun my/consult-imenu--save-origin (&rest _)
+    "Save the current buffer and point for Imenu preselection."
+    (setq my/consult-imenu--origin (cons (current-buffer) (point))))
+
+  (defun my/consult-imenu--preselect (&rest _)
+    "Select the Imenu item at point in the Vertico popup.
+The candidate order stays unchanged."
+    (when (and my/consult-imenu--origin
+               (memq current-minibuffer-command '(consult-imenu consult-imenu-multi))
+               vertico--candidates)
+      (let* ((pos (cdr my/consult-imenu--origin))
+             (cand (with-current-buffer (car my/consult-imenu--origin)
+                     (my/consult-imenu--default pos)))
+             (idx (and cand (seq-position vertico--candidates cand))))
+        (setq my/consult-imenu--origin nil)
+        (when idx
+          (setq vertico--index idx)))))
+
   (defun my/consult-git-fzf-builder (query)
     "Constructs a `git ls-files | fzf -f' command with the given query."
       (list
@@ -790,6 +826,12 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
    consult-source-bookmark consult-source-file-register
    consult-source-recent-file consult-source-project-recent-file
    :preview-key '(:debounce 0.4 any))
+
+  ;; Select the Imenu item at point without changing the candidate order.
+  (advice-add #'consult-imenu :before #'my/consult-imenu--save-origin)
+  (advice-add #'consult-imenu-multi :before #'my/consult-imenu--save-origin)
+  (with-eval-after-load 'vertico
+    (advice-add #'vertico--update :after #'my/consult-imenu--preselect))
   )
 
 (use-package consult-xref-stack

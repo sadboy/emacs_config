@@ -27,6 +27,7 @@
 
 ;; Add your preferred archives
 (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+(setq package-pinned-packages '((consult . "gnu") (vertico . "gnu") (embark . "gnu")))
 
 ;; (package-initialize)
 
