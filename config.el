@@ -34,12 +34,12 @@
       sentence-end-without-space "。，？！；……"
       sentence-end-double-space nil
       default-input-method "TeX"
+
       scroll-error-top-bottom t
+      isearch-allow-scroll t
 
       view-read-only t                  ; Open read-only files in view mode
       visible-bell nil
-      scroll-conservatively 10000
-      isearch-allow-scroll t
       inhibit-startup-message t
       frame-title-format (concat "Emacs" emacs-version "@%b")
       column-number-mode t
@@ -59,7 +59,6 @@
       parens-require-spaces nil
       transient-mark-mode nil
       set-mark-command-repeat-pop t
-      tramp-default-method "sshx"
 
       window-min-width 24
       window-min-height 8
