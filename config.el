@@ -783,6 +783,70 @@ The candidate order stays unchanged."
         (when idx
           (setq vertico--index idx)))))
 
+  (defun my/consult-imenu--flatten-advice (orig prefix face list types)
+    "Reverse the flattened prefix of Imenu candidates.
+The parent path stays matchable as a suffix.  ORIG, PREFIX, FACE,
+LIST and TYPES are as in `consult-imenu--flatten'."
+    (let ((items (funcall orig prefix face list types)))
+      (if prefix
+          (progn
+            (dolist (item items)
+              (let ((key (car item)))
+                (when (and (not (get-text-property 0 'my/consult-imenu--path key))
+                           (string-prefix-p prefix key))
+                  (put-text-property 0 (length prefix)
+                                     'my/consult-imenu--path prefix key))))
+            items)
+        (mapcar #'my/consult-imenu--reorder items))))
+
+  (defconst my/consult-imenu--separator " · "
+    "Separator between an Imenu item name and its parent path.")
+
+  (defun my/consult-imenu--reorder (item)
+    "Return Imenu ITEM with the leaf name first and the parent path last."
+    (let* ((key (car item))
+           (path (get-text-property 0 'my/consult-imenu--path key))
+           (type (get-text-property 0 'consult--type key))
+           (type-end (and type (next-single-property-change 0 'consult--type key)))
+           (leaf (substring key (if path (1+ (length path)) 0)))
+           (parents (and path
+                         (substring path (min (length path)
+                                              (if type-end (1+ type-end) 0)))))
+           (name (if (or (null parents) (string-empty-p parents))
+                     leaf
+                   (concat leaf my/consult-imenu--separator parents))))
+      (when type
+        (put-text-property 0 (length name) 'consult--type type name))
+      (cons name (cdr item))))
+
+  (defun my/consult-imenu--copy-properties (from to)
+    "Copy the text properties of string FROM to the same positions in TO."
+    (let ((pos 0)
+          (len (length from)))
+      (while (< pos len)
+        (let ((next (next-property-change pos from len)))
+          (set-text-properties pos next (text-properties-at pos from) to)
+          (setq pos next)))))
+
+  (defun my/consult-imenu--deduplicate-advice (orig items)
+    "Keep candidate text properties when deduplicating ITEMS."
+    (let ((keys (mapcar #'car items)))
+      (funcall orig items)
+      (let ((ks keys))
+        (dolist (item items)
+          (unless (eq (car item) (car ks))
+            (my/consult-imenu--copy-properties (car ks) (car item)))
+          (setq ks (cdr ks))))))
+
+  (defun my/consult-imenu--group ()
+    "Return a group function for reordered Imenu candidates."
+    (when-let* ((narrow (consult-imenu--narrow)))
+      (lambda (cand transform)
+        (if transform
+            cand
+          (when-let* ((type (get-text-property 0 'consult--type cand)))
+            (alist-get type narrow))))))
+
   (defun my/consult-git-fzf-builder (query)
     "Constructs a `git ls-files | fzf -f' command with the given query."
       (list
@@ -831,6 +895,13 @@ The candidate order stays unchanged."
   (advice-add #'consult-imenu-multi :before #'my/consult-imenu--save-origin)
   (with-eval-after-load 'vertico
     (advice-add #'vertico--update :after #'my/consult-imenu--preselect))
+
+  ;; Put the Imenu item name first and the parent path last.
+  (with-eval-after-load 'consult-imenu
+    (advice-add #'consult-imenu--flatten :around #'my/consult-imenu--flatten-advice)
+    (advice-add #'consult-imenu--deduplicate :around #'my/consult-imenu--deduplicate-advice))
+  (consult-customize consult-imenu consult-imenu-multi
+    :group (my/consult-imenu--group))
   )
 
 (use-package consult-xref-stack
