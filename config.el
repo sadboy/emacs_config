@@ -1361,7 +1361,12 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (setq magit-tramp-pipe-stty-settings 'pty)
 
   (add-hook 'eshell-mode-hook 'with-editor-export-editor)
-  (setq magit-auto-revert-mode nil
+  (magit-auto-revert-mode 1)
+  (setq magit-auto-revert-immediately t
+        magit-auto-revert-tracked-only t
+        auto-revert-use-notify t
+        auto-revert-buffer-list-filter #'magit-auto-revert-repository-buffer-p
+        auto-revert-verbose nil
         magit-last-seen-setup-instructions "1.4.0"))
 
 (use-package forge
