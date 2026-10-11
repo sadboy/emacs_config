@@ -1604,6 +1604,27 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   ;; rust-analyzer:
   (add-to-list 'eglot-semantic-token-modifiers "mutable")
 
+  ;; Eglot's Imenu visits the start of a DocumentSymbol's whole range, which
+  ;; includes leading doc comments and attributes.  Use the symbol's
+  ;; `selectionRange' (the item name) instead, like Eglot's `xref' commands
+  ;; do when they follow a `targetSelectionRange':
+  (defun my/eglot--imenu-use-selection-range (args)
+    "Prefer each DocumentSymbol's `selectionRange' over its `range' in ARGS."
+    (cl-labels ((normalize (symbol)
+                  (if-let* ((selection (plist-get symbol :selectionRange)))
+                      (let ((copy (plist-put (copy-sequence symbol)
+                                             :range selection)))
+                        (if (plist-member copy :children)
+                            (plist-put copy :children
+                                       (mapcar #'normalize
+                                               (plist-get copy :children)))
+                          copy))
+                    symbol)))
+      (list (mapcar #'normalize (car args)))))
+
+  (advice-add #'eglot--imenu-DocumentSymbol :filter-args
+              #'my/eglot--imenu-use-selection-range)
+
   (setq-default
    eglot-workspace-configuration
    '(
