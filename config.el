@@ -30,7 +30,6 @@
 (setq package-enable-at-startup nil
       ;; Don't change default temp directory on Mac:
       ;; temporary-file-directory (concat "/tmp/emacs_" (getenv "USER") "/")
-      gc-cons-threshold 10000000        ; Increase garbage collection threshold
       sentence-end-without-space "。，？！；……"
       sentence-end-double-space nil
       default-input-method "TeX"
@@ -167,6 +166,7 @@
 
 ;; {{{ Builtin packages:
 (use-package tramp
+  :defer t
   :init
   (connection-local-set-profile-variables
    'remote-direct-async-process
@@ -659,7 +659,8 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
   :init
   (marginalia-mode 1))
 
-(use-package consult-eglot)
+(use-package consult-eglot
+  :defer t)
 ;; 4. CONSULT: Search & Navigation (mimics counsel & swiper)
 (use-package consult
   :ensure t
@@ -1032,7 +1033,7 @@ LIST and TYPES are as in `consult-imenu--flatten'."
   )
 
 (use-package basic
-  :after hydra transient
+  :after hydra
   :demand t
   :load-path "~/emacs/config"
   :config
@@ -1049,7 +1050,7 @@ LIST and TYPES are as in `consult-imenu--flatten'."
             display-buffer-same-window))
 
          ;; transient popup:
-         `(,(format "^%s$" (regexp-quote transient--buffer-name))
+         `(,(format "^%s$" (regexp-quote (or (bound-and-true-p transient--buffer-name) " *transient*")))
            (display-buffer-reuse-window
             display-buffer-in-side-window
             ;; display-buffer--maybe-top-panel
@@ -1301,6 +1302,7 @@ _h_   _l_   _o_k        _y_ank
 
 (use-package ghostel
   :ensure t
+  :defer t
   :bind
   (("C-S-t" . ghostel)
    :map ghostel-mode-map
@@ -1332,16 +1334,17 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (add-to-list 'ghostel-eval-cmds '("magit-status-setup-buffer" magit-status-setup-buffer))
   (add-to-list 'ghostel-eval-cmds '("read-stdin" basic/read-stdin-to-buffer-cmd))
   (add-to-list 'ghostel-eval-cmds '("basic-find-file" basic/find-file-on-host-cmd))
+  (ghostel-compile-global-mode 1)
   )
 
 (use-package ghostel-eshell
   :hook (eshell-load . ghostel-eshell-visual-command-mode))
 
 (use-package ghostel-compile
-  :hook (after-init . ghostel-compile-global-mode))
+  :defer t)
 
 (use-package ghostel-comint
-  :hook (after-init . ghostel-comint-global-mode))
+  :hook (comint-mode . ghostel-comint-mode))
 
 (use-package wgrep
   :ensure t
@@ -1389,6 +1392,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (solaire-global-mode t))
 
 (use-package transient
+  :defer t
   :config
   (setq transient-show-during-minibuffer-read t
         transient-mode-line-format 3
@@ -1402,8 +1406,26 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 
 (use-package magit
   :ensure t
+  :defer t
   ;; :hook
   ;; (eshell-mode . #'with-editor-export-editor)
+
+  :preface
+  (defun my/magit-diff-visit-worktree-file ()
+    (interactive)
+    (magit-diff-visit-worktree-file #'display-buffer))
+  (defun my/magit-diff-visit-file ()
+    (interactive)
+    (magit-diff-visit-file #'display-buffer))
+
+  :init
+  (setq magit-tramp-pipe-stty-settings 'pty
+        magit-auto-revert-immediately t
+        magit-auto-revert-tracked-only t
+        auto-revert-use-notify t
+        auto-revert-buffer-list-filter #'magit-auto-revert-repository-buffer-p
+        auto-revert-verbose nil
+        magit-last-seen-setup-instructions "1.4.0")
 
   :bind
   (
@@ -1422,23 +1444,8 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    )
 
   :config
-  (defun my/magit-diff-visit-worktree-file ()
-    (interactive)
-    (magit-diff-visit-worktree-file #'display-buffer))
-  (defun my/magit-diff-visit-file ()
-    (interactive)
-    (magit-diff-visit-file #'display-buffer))
-
-  (setq magit-tramp-pipe-stty-settings 'pty)
-
-  (add-hook 'eshell-mode-hook 'with-editor-export-editor)
   (magit-auto-revert-mode 1)
-  (setq magit-auto-revert-immediately t
-        magit-auto-revert-tracked-only t
-        auto-revert-use-notify t
-        auto-revert-buffer-list-filter #'magit-auto-revert-repository-buffer-p
-        auto-revert-verbose nil
-        magit-last-seen-setup-instructions "1.4.0"))
+  (add-hook 'eshell-mode-hook 'with-editor-export-editor))
 
 (use-package forge
   :no-require t
@@ -1464,6 +1471,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   )
 
 (use-package org
+  :defer t
   :no-require t
   :bind
   (("C-c l" . #'org-store-link)
@@ -1903,6 +1911,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 
 ;; Tree sitter is native in Emacs 29
 (use-package tree-sitter
+  :defer t
   ;; :config
   ;; (require 'tree-sitter-langs)
   ;; (global-tree-sitter-mode)
@@ -1938,6 +1947,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
 ;;   (global-treesit-auto-mode))
 
 (use-package pyvenv
+  :defer t
   :ensure t
   :init
   (setenv "WORKON_HOME" (getenv "PYTHON_VENVS"))
@@ -2046,7 +2056,7 @@ current buffer.
   ;; (hs-minor-mode t)
   (whitespace-mode t)
   (electric-pair-mode t)
-  (flyspell-prog-mode)
+  (when buffer-file-name (flyspell-prog-mode))
   (setq fill-column 80)
   (setq tab-width 4)
   (auto-fill-mode -1)
@@ -2172,6 +2182,7 @@ current buffer.
   :no-require t)
 
 (use-package rust-mode
+  :defer t
   :ensure t
   :init
   (setq rust-mode-treesitter-derive t)
@@ -2181,6 +2192,7 @@ current buffer.
 ;;   :hook
 ;;   (rust-mode . cargo-minor-mode))
 (use-package rustic
+  :defer t
   :ensure t
   :after (rust-mode)
   :init
