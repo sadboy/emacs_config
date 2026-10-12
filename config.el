@@ -265,6 +265,7 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
 
            ;; Case 2: Match a specific project name
            ((and (string-match-p "antlr4" name)
+                 (bound-and-true-p eglot-workspace-configuration)
                  (plistp eglot-workspace-configuration))
             (setf (plist-get (plist-get eglot-workspace-configuration :rust-analyzer)
                              :linkedProjects)
@@ -1607,32 +1608,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ;; ("C-c C-m" . flymake-show-project-diagnostics)
    )
 
-  :config
-  ;; This is required for eglot to receive `mut' variable markers from
-  ;; rust-analyzer:
-  (add-to-list 'eglot-semantic-token-modifiers "mutable")
-
-  ;; Eglot's Imenu visits the start of a DocumentSymbol's whole range, which
-  ;; includes leading doc comments and attributes.  Use the symbol's
-  ;; `selectionRange' (the item name) instead, like Eglot's `xref' commands
-  ;; do when they follow a `targetSelectionRange':
-  (defun my/eglot--imenu-use-selection-range (args)
-    "Prefer each DocumentSymbol's `selectionRange' over its `range' in ARGS."
-    (cl-labels ((normalize (symbol)
-                  (if-let* ((selection (plist-get symbol :selectionRange)))
-                      (let ((copy (plist-put (copy-sequence symbol)
-                                             :range selection)))
-                        (if (plist-member copy :children)
-                            (plist-put copy :children
-                                       (mapcar #'normalize
-                                               (plist-get copy :children)))
-                          copy))
-                    symbol)))
-      (list (mapcar #'normalize (car args)))))
-
-  (advice-add #'eglot--imenu-DocumentSymbol :filter-args
-              #'my/eglot--imenu-use-selection-range)
-
+  :init
   (setq-default
    eglot-workspace-configuration
    '(
@@ -1674,6 +1650,32 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
                        https://raw.githubusercontent.com/Vandebron/gh-mpyl/refs/heads/main/src/mpyl/schema/project.schema.yml ["project.yml"]
                        https://json.schemastore.org/yamllint.json ["/*.yml"])
              :schemaStore (:enable t))))
+
+  :config
+  ;; This is required for eglot to receive `mut' variable markers from
+  ;; rust-analyzer:
+  (add-to-list 'eglot-semantic-token-modifiers "mutable")
+
+  ;; Eglot's Imenu visits the start of a DocumentSymbol's whole range, which
+  ;; includes leading doc comments and attributes.  Use the symbol's
+  ;; `selectionRange' (the item name) instead, like Eglot's `xref' commands
+  ;; do when they follow a `targetSelectionRange':
+  (defun my/eglot--imenu-use-selection-range (args)
+    "Prefer each DocumentSymbol's `selectionRange' over its `range' in ARGS."
+    (cl-labels ((normalize (symbol)
+                  (if-let* ((selection (plist-get symbol :selectionRange)))
+                      (let ((copy (plist-put (copy-sequence symbol)
+                                             :range selection)))
+                        (if (plist-member copy :children)
+                            (plist-put copy :children
+                                       (mapcar #'normalize
+                                               (plist-get copy :children)))
+                          copy))
+                    symbol)))
+      (list (mapcar #'normalize (car args)))))
+
+  (advice-add #'eglot--imenu-DocumentSymbol :filter-args
+              #'my/eglot--imenu-use-selection-range)
 
   (setq eglot-autoshutdown t
         eglot-confirm-server-edits nil
