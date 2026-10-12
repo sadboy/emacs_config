@@ -99,6 +99,9 @@
 (when (fboundp 'delete-selection-mode)
   (delete-selection-mode t))
 
+;; `mwheel' is not preloaded, so bind the wheel events explicitly.
+(mouse-wheel-mode 1)
+
 (put 'narrow-to-region 'disabled nil)
 (put 'dired-find-alternate-file 'disabled nil)
 (put 'scroll-left 'disabled nil)
