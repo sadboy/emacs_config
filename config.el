@@ -852,6 +852,27 @@ LIST and TYPES are as in `consult-imenu--flatten'."
           (when-let* ((type (get-text-property 0 'consult--type cand)))
             (alist-get type narrow))))))
 
+  (defun my/consult-imenu--preview-pos (cand)
+    "Return the buffer position to preview for Imenu CAND, or nil.
+Handles plain position items and the special items that
+`consult-imenu--normalize' builds when a backend customizes
+`imenu-default-goto-function' (as Magit does), whose car is the
+position."
+    (let ((pos (cdr cand)))
+      (cond
+       ((markerp pos) pos)
+       ((and (consp pos) (markerp (car pos))) (car pos))
+       ((and (consp pos) (integerp (car pos))) (car pos)))))
+
+  (defun my/consult-imenu--state (action cand)
+    "Preview and jump to Imenu CAND.
+Like the state function in `consult-imenu--select', but also preview
+items whose backend uses a custom `imenu-default-goto-function'."
+    (funcall (consult--jump-preview) action
+             (and cand (my/consult-imenu--preview-pos cand)))
+    (when (and cand (eq action 'return))
+      (consult-imenu--jump cand)))
+
   (defun my/consult-git-fzf-builder (query)
     "Constructs a `git ls-files | fzf -f' command with the given query."
       (list
@@ -906,7 +927,8 @@ LIST and TYPES are as in `consult-imenu--flatten'."
     (advice-add #'consult-imenu--flatten :around #'my/consult-imenu--flatten-advice)
     (advice-add #'consult-imenu--deduplicate :around #'my/consult-imenu--deduplicate-advice))
   (consult-customize consult-imenu consult-imenu-multi
-    :group (my/consult-imenu--group))
+    :group (my/consult-imenu--group)
+    :state #'my/consult-imenu--state)
   )
 
 (use-package consult-xref-stack
