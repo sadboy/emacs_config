@@ -675,6 +675,8 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
    ;; ("C-c o" . consult-outline)
    ;; ("C-c i" . consult-imenu)
    ("C-c C-m" . consult-flymake)               ;; Alternative: consult-flycheck
+   ("M-R" . xref-find-references)              ;; so we load consult when xref
+                                               ;; is invoked
 
    ;; M-g bindings in `goto-map'
    ("M-g e" . consult-compile-error)
@@ -899,10 +901,11 @@ items whose backend uses a custom `imenu-default-goto-function'."
                   :history '(:input consult--find-history)
                   ))))
 
-  :config
   ;; Use Consult to select xref targets (e.g., multi-matches)
   (setq xref-show-xrefs-function #'consult-xref
         xref-show-definitions-function #'consult-xref)
+
+  :config
   (setq consult-ripgrep-args
         "rg --null --line-buffered --color=never --max-columns=1000 --path-separator /\
    --smart-case --no-heading --with-filename --line-number --hidden")
@@ -1618,7 +1621,6 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("C-c i m" . #'eglot-menu)
    ("C-c i f" . #'eglot-format-buffer)
    ("C-c i h" . #'eglot-inlay-hints-mode)
-   ("M-R" . xref-find-references)
    ("M-?" . eldoc-doc-buffer)
 
    :map eglot-mode-map
