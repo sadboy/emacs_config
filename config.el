@@ -396,6 +396,7 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
   (add-hook 'ediff-quit-hook 'my-ediff-qh 'append)
   )
 (use-package wdired
+  :init (require 'dired)
   :bind
   (:map dired-mode-map
         ("C-x C-q" . wdired-change-to-wdired-mode))
@@ -477,10 +478,18 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
 
 (use-package flx :ensure t)
 
-(use-package dired-subtree
-  :ensure t
+(use-package dired
+  :ensure nil
+  :init (require 'dired)
   :bind
   (:map dired-mode-map
+        ("C-M-k" . dired-kill-subdir)))
+(use-package dired-subtree
+  :ensure t
+  :init (require 'dired)
+  :bind
+  (:map dired-mode-map
+        ("TAB" . dired-subtree-toggle)
         ("<tab>" . dired-subtree-toggle)
         ("<backtab>" . dired-subtree-cycle)
         ("<S-tab>" . dired-subtree-cycle))
