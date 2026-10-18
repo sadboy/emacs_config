@@ -16,6 +16,9 @@ This repo contains my personal Emacs and Bash configurations files.
   preferences and settings that are dynamic and likely to change go into
   `config.el`, whereas utilities that are more stable and less likely to change
   go into this file. Byte compiled into `basic.elc`; loaded from `config.el`.
+- `jinja2-plain.el`, `stringtemplate-plain.el`, `asdl-plain.el` — Standalone
+  major modes that fontify only their own language constructs and leave the
+  rest of the text plain. Byte compiled; loaded on demand from `config.el`.
 - `bash.linux` — Bash configuration for Linux. It sets up Emacs and vterm
   integration and adds the private `bin` directories to `PATH`.
 - `bin/install-jdtls.sh` — Installs the Eclipse JDT language server on Ubuntu and macOS.

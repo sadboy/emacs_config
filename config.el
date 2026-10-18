@@ -1268,9 +1268,6 @@ _h_   _l_   _o_k        _y_ank
     ("o" nil nil)
     ("q" nil nil))
 
-  (add-hook 'stringtemplate-mode-hook  #'my-prog-mode-hook)
-  (add-hook 'asdl-mode-hook            #'my-prog-mode-hook)
-
   :bind
   (
    ("s-1" . #'basic/focus-left-side-window)
@@ -2386,6 +2383,21 @@ current buffer.
   (autoload 'jinja2-plain-mode "jinja2-plain" nil t)
   :mode (("\\.j2\\'" . jinja2-plain-mode)
          ("\\.jinja2?\\'" . jinja2-plain-mode)))
+(use-package stringtemplate-plain
+  :load-path "~/emacs/config"
+  :defer t
+  :preface
+  (autoload 'stringtemplate-mode "stringtemplate-plain" nil t)
+  :mode (("\\.st\\'" . stringtemplate-mode)
+         ("\\.stg\\'" . stringtemplate-mode))
+  :hook (stringtemplate-mode . my-prog-mode-hook))
+(use-package asdl-plain
+  :load-path "~/emacs/config"
+  :defer t
+  :preface
+  (autoload 'asdl-mode "asdl-plain" nil t)
+  :mode ("\\.asdl\\'" . asdl-mode)
+  :hook (asdl-mode . my-prog-mode-hook))
 ;; }}}
 
 ;; {{{ Theming

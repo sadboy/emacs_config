@@ -26,168 +26,16 @@
 
 (eval-when-compile (require 'tramp))
 
-(require 'generic-x)
 (require 'xref)
 (require 'imenu)
 
-(define-generic-mode 'stringtemplate-mode
-  '("//" ("/*" . "*/") ("<!" . "!>"))         ; Comment delimiters
-  '("default" "delimiters" "group" "import")  ; StringTemplate keywords
-  '(;; Dictionary definitions:  name ::= [ ... ]
-    ("\\_<\\([A-Za-z_][A-Za-z0-9_.-]*\\)\\_>[ \t]*::=[ \t]*\\["
-     (1 'font-lock-constant-face))
-    ;; Definition names (templates, aliases, region overrides like
-    ;; @tmpl.region): the name contrasts with the body that follows.
-    ("^[ \t]*\\(@?[A-Za-z_][A-Za-z0-9_.-]*\\)[ \t]*\\((\\([^)]*\\))\\)?[ \t]*\\(::=\\)"
-     (1 'font-lock-function-name-face)
-     (3 'font-lock-variable-name-face nil t)
-     (4 'font-lock-keyword-face))
-    ;; Header group name:  group Name;
-    ("\\_<group\\_>\\s-+\\([A-Za-z_][A-Za-z0-9_.-]*\\)"
-     (1 'font-lock-constant-face))
-    ;; Conditional subtemplates:  <if(x)> ... <elseif(y)> ... <endif>
-    ("[^\\]<\\s-*\\(if\\|elseif\\|else\\|endif\\)\\_>" (1 'font-lock-keyword-face))
-    ;; Attribute expressions:  <name>, <a:b()>, <x; separator=", ">.  Comes
-    ;; before strings so expressions with embedded quotes stay intact.
-    ("[^\\]<\\([^<>%>\" \t\n][^>\n]*\\)>" (1 'font-lock-variable-name-face))
-    ;; String literals, including expression-free single-line bodies.  Text
-    ;; stays on one line so an unpaired quote cannot swallow the next line.
-    ("\"[^\"\\\n]*\\(?:\\\\.[^\"\\\n]*\\)*\"" . 'font-lock-string-face))
-  '("\\.st\\'" "\\.stg\\'")                    ; Associate with .st and .stg files
-  '((lambda ()
-      (setq-local font-lock-multiline t)  ; multi-line argument lists
-      ;; `"' must not open a string: bodies in <<...>> may hold lone quotes.
-      (modify-syntax-entry ?\" ".")
-      (modify-syntax-entry ?< ".")
-      (modify-syntax-entry ?> ".")
-      (setq-local imenu-create-index-function
-                  #'basic/st-imenu-create-index)
-      (add-hook 'after-save-hook #'imenu-flush-cache nil t)
-      (add-hook 'after-revert-hook #'imenu-flush-cache nil t)
-      (add-hook 'xref-backend-functions #'basic/generic-mode-imenu-xref-backend nil t)))
-  "A lightweight major mode for StringTemplate files.")
-
-(define-generic-mode 'asdl-mode
-  '("--")                                      ; Line comment: --
-  nil                                          ; Keywords are in font-lock list
-  '(;; Section headers
-    ("^[ \t]*\\(module\\|attributes\\)\\_>" . 'font-lock-keyword-face)
-    ;; Module name:  module Name
-    ("\\_<module[ \t]+\\([A-Za-z_][A-Za-z0-9_]*\\)" (1 'font-lock-constant-face))
-    ;; Type definition:  TypeName =
-    ("^[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)[ \t]*=" (1 'font-lock-type-face))
-    ;; Constructor: first identifier after '=' or '|'
-    ("\\(?:=\\||\\)[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)" (1 'font-lock-function-name-face))
-    ;; Field types:  Con(type name, user* names, builtin? opt), also
-    ;; when the fields sit on their own continuation lines.
-    ("\\(?:[,(][ \t\r\n]*\\|^[ \t]+\\)\\([A-Za-z_][A-Za-z0-9_]*\\)[?*]?"
-     (1 (if (member (match-string 1)
-                    '("identifier" "int" "string" "bytes" "object" "constant" "bool"))
-            'font-lock-builtin-face
-          'font-lock-type-face)))
-    ;; Field cardinality modifiers (* and ?)
-    ("[?*]" . 'font-lock-keyword-face))
-  '("\\.asdl\\'")                              ; Files: *.asdl
-  '((lambda ()
-      (modify-syntax-entry ?* ".")          ; `*' is punctuation, not a word char
-      (setq-local imenu-create-index-function
-                  #'basic/asdl-imenu-create-index)
-      (add-hook 'after-save-hook #'imenu-flush-cache nil t)
-      (add-hook 'after-revert-hook #'imenu-flush-cache nil t)
-      (add-hook 'xref-backend-functions #'basic/generic-mode-imenu-xref-backend nil t)))
-  "A lightweight major mode for Zephyr ASDL files.")
-
-(defun basic/st-imenu-create-index ()
-  "Return an imenu index for the current StringTemplate group buffer.
-
-Template definitions (including dictionaries, aliases, and region
-overrides like @enclosing.region) become index entries.  Formal
-arguments are shown for context, as in \"name(arg1, arg2)\".
-Matches inside comments are ignored.  Positions are markers when
-`imenu-use-markers' is non-nil."
-  (save-excursion
-    (goto-char (point-min))
-    (let ((def-re (concat "^[ \t]*"
-                          "\\(@?[A-Za-z_][A-Za-z0-9_-]*"
-                          "\\(?:\\.[A-Za-z_][A-Za-z0-9_-]*\\)?\\)"
-                          "[ \t]*\\(([^)]*)\\)?"
-                          "[ \t\n]*::="))
-          index)
-      (while (re-search-forward def-re nil t)
-        (let ((name (match-string-no-properties 1))
-              (args (match-string-no-properties 2))
-              (beg (match-beginning 1)))
-          ;; `syntax-ppss' moves point to POS; keep point at match end.
-          (unless (save-excursion (nth 8 (syntax-ppss beg)))
-            (when args
-              (setq args
-                    (mapconcat
-                     (lambda (s)
-                       (replace-regexp-in-string
-                        "\\`[ \t\r\n]+\\|[ \t\r\n]+\\'" "" s))
-                     (split-string (substring args 1 -1) ",")
-                     ", "))
-              (setq name (concat name "(" args ")")))
-            (push (cons name (if imenu-use-markers
-                                 (copy-marker beg t)
-                               beg))
-                  index))))
-      (nreverse index))))
-
-(defun basic/asdl-imenu-create-index ()
-  "Return an imenu index for the current ASDL buffer.
-
-Type definitions (sums and products) become top-level entries;
-the constructors of each definition become sub-entries; the
-definition's own position heads the sub-list, so the type name is
-selectable directly.
-Matches inside comments are ignored.
-Positions are markers when `imenu-use-markers' is non-nil."
-  (save-excursion
-    (goto-char (point-min))
-    (let ((def-re "^[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)[ \t]*=")
-          (ctor-re "\\(?:=\\||\\)[ \t]*\\([A-Za-z_][A-Za-z0-9_]*\\)")
-          defs)
-      (while (re-search-forward def-re nil t)
-        (let ((name (match-string-no-properties 1))
-              (def-beg (match-beginning 0)))
-          ;; `syntax-ppss' moves point to POS; keep point at match end.
-          (unless (save-excursion (nth 8 (syntax-ppss (match-beginning 1))))
-            (push (list name (if imenu-use-markers
-                                 (copy-marker def-beg t)
-                               def-beg))
-                  defs))))
-      (setq defs (nreverse defs))
-      (let ((rest defs)
-            index)
-        (while rest
-          (let* ((name (nth 0 (car rest)))
-                 (beg (nth 1 (car rest)))
-                 (end (if (cdr rest) (nth 1 (cadr rest)) (point-max)))
-                 ctors)
-            (goto-char beg)
-            (while (re-search-forward ctor-re end t)
-              (let ((name (match-string-no-properties 1))
-                    (name-beg (match-beginning 1)))
-                (unless (save-excursion (nth 8 (syntax-ppss name-beg)))
-                (push (cons name (if imenu-use-markers
-                                   (copy-marker name-beg t)
-                                 name-beg))
-                      ctors))))
-            (push (if ctors
-                      (cons name (cons (cons name beg)
-                                       (nreverse ctors)))
-                    (cons name beg))
-                  index)
-            (setq rest (cdr rest))))
-        (nreverse index)))))
 
 ;;; Xref backend driven by the imenu index
 ;;;
 ;;; Enabled globally, after `etags': etags keeps priority in buffers with
 ;;; a TAGS table; wherever etags declines, the imenu index steps in.
-;;; The generic modes above add the same function buffer-locally, so
-;;; there the imenu index wins even over etags.
+;;; The plain modes for StringTemplate and ASDL add the same function
+;;; buffer-locally, so there the imenu index wins even over etags.
 
 (defun basic/imenu-xref-backend ()
   "Return the imenu-based xref backend when the buffer has imenu support."
@@ -205,11 +53,11 @@ Positions are markers when `imenu-use-markers' is non-nil."
 (defun basic/generic-mode-imenu-xref-backend ()
   "Like `basic/imenu-xref-backend', as a distinct function symbol.
 
-The generic modes install this buffer-locally.  A function present
-in both the local and the global hook value runs only at its global
-position, after `etags'; the separate symbol avoids that and keeps
-the imenu index first in these modes even when a TAGS table is
-configured."
+The StringTemplate and ASDL plain modes install this buffer-locally.
+A function present in both the local and the global hook value runs
+only at its global position, after `etags'; the separate symbol avoids
+that and keeps the imenu index first in these modes even when a TAGS
+table is configured."
   (basic/imenu-xref-backend))
 
 (defun basic/imenu--flatten-index (alist &optional prefix)
