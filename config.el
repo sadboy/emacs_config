@@ -875,11 +875,18 @@ position."
        ((and (consp pos) (markerp (car pos))) (car pos))
        ((and (consp pos) (integerp (car pos))) (car pos)))))
 
+  (defvar my/consult-imenu--preview nil
+    "Preview function of the running `consult-imenu' session.
+`consult--jump-preview' returns a closure which keeps the overlays
+to remove, so it must be created once per session, not per call.")
+
   (defun my/consult-imenu--state (action cand)
     "Preview and jump to Imenu CAND.
 Like the state function in `consult-imenu--select', but also preview
 items whose backend uses a custom `imenu-default-goto-function'."
-    (funcall (consult--jump-preview) action
+    (when (or (eq action 'setup) (null my/consult-imenu--preview))
+      (setq my/consult-imenu--preview (consult--jump-preview)))
+    (funcall my/consult-imenu--preview action
              (and cand (my/consult-imenu--preview-pos cand)))
     (when (and cand (eq action 'return))
       (consult-imenu--jump cand)))
