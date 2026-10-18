@@ -1485,9 +1485,42 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (magit-auto-revert-mode 1)
   (add-hook 'eshell-mode-hook 'with-editor-export-editor))
 
-(use-package forge
-  :no-require t
-  :after magit)
+;; GitHub via the `gh' CLI: authentication stays in ~/.config/gh/hosts.yml,
+;; no tokens in Emacs and no local database.
+(use-package consult-gh
+  :ensure t
+  :defer t
+  :init
+  ;; `consult-gh-transient.el' has no autoload cookie and is not required by
+  ;; `consult-gh.el', so declare it ourselves and keep the package deferred.
+  (autoload 'consult-gh-transient "consult-gh-transient" nil t)
+  :bind
+  (("C-c g" . #'consult-gh-transient))
+  :config
+  ;; Prefill the local repo in `*-list' prompts.  The shipped default,
+  ;; `suggest', is never tested for (only literal `t' is), so without
+  ;; this the repo prompt always starts empty.
+  (setq consult-gh-prioritize-local-folder t)
+  ;; Edit PR/issue/comment buffers in `org-mode'.  In `gfm-mode' (the default)
+  ;; `consult-gh-topics--get-buffer-create' calls
+  ;; `markdown-display-inline-images' unguarded, which errors "Cannot show
+  ;; images" on a terminal frame.  Bodies are exported org -> markdown on
+  ;; submit, so GitHub still gets markdown.
+  (setq consult-gh-topic-major-mode 'org-mode)
+  ;; Per-buffer keys in PR/issue view and edit buffers (`C-c C-e' edit,
+  ;; `C-c C-c' submit/comment, `C-c C-d' diff, ...) are opt-in.
+  (consult-gh-enable-default-keybindings))
+
+
+(use-package magit-gh
+  :ensure t
+  :defer t)
+
+(with-eval-after-load 'magit
+  ;; `magit-gh' binds `,' in `magit-mode-map' and a "GitHub" suffix in
+  ;; `magit-dispatch' only when it is loaded, and it has no autoload for
+  ;; its buffer-local maps.
+  (require 'magit-gh nil t))
 
 (use-package git-link
   :ensure t
@@ -2341,7 +2374,9 @@ current buffer.
   :mode "\\.json\\'")
 (use-package jinja2-plain
   :load-path "~/emacs/config"
-  :demand t
+  :defer t
+  :preface
+  (autoload 'jinja2-plain-mode "jinja2-plain" nil t)
   :mode (("\\.j2\\'" . jinja2-plain-mode)
          ("\\.jinja2?\\'" . jinja2-plain-mode)))
 ;; }}}

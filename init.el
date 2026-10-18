@@ -110,11 +110,12 @@
      "83550d0386203f010fa42ad1af064a766cfec06fc2f42eb4f2d89ab646f3ac01" default))
  '(package-selected-packages
    '(affe ahk-mode all-the-icons-dired all-the-icons-gnus all-the-icons-ivy
-          breadcrumb cape cmake-mode config consult-eglot consult-ls-git
+          breadcrumb cape cmake-mode config consult-eglot consult-gh
+          consult-ls-git
           consult-xref-stack copilot corfu cython-mode d2-mode dash-docs
-          dired-narrow doom-themes embark-consult exec-path-from-shell flx forge
+          dired-narrow doom-themes embark-consult exec-path-from-shell flx
           git-link go-mode golden-ratio gptel grep-context hack-mode hotfuzz
-          imenu-list jarchive marginalia minimap minuet multiple-cursors
+          imenu-list jarchive magit-gh marginalia minimap minuet multiple-cursors
           nerd-icons orderless org-bullets org-modern org-roam protobuf-mode
           pyvenv rotate rustic solaire-mode spacious-padding symbol-overlay
           thrift toml-mode tramp-rpc tree-sitter-langs treemacs typescript-mode
