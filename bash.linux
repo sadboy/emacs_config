@@ -8,13 +8,13 @@ EMACS_PREFIX=${EMACS_PREFIX:-/usr}
 EMACS_BIN="${EMACS_PREFIX}/bin"
 EMACS=${EMACS_BIN}/emacs
 EMACSCLIENT=${EMACS_BIN}/emacsclient
-if [ "x${EMACS_SERVERNAME}" != "x" ] ; then
-    EMACSCLIENT_ARGS="-s ${EMACS_SERVERNAME}"
-else
-    EMACSCLIENT_ARGS=
-fi
 
-# alias emacsclient="${EMACS_BIN}/emacsclient ${EMACSCLIENT_ARGS}"
+# Inside Herdr, use the workspace ID as the Emacs server name, so that
+# emacsclient and ff reach the Emacs instance of this workspace.
+if [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_WORKSPACE_ID:-}" ] \
+   && [ -z "${EMACS_SERVERNAME:-}" ]; then
+    export EMACS_SERVERNAME="${HERDR_WORKSPACE_ID}"
+fi
 
 if [[ ${INSIDE_EMACS} == *vterm* ]] ; then
 
@@ -104,20 +104,10 @@ if [ "x${ORACL_LBIN}" != "x" ] ; then
 fi
 [ "x${GIT_PATH}" != "x" ] && add_path PATH ${GIT_PATH}/bin
 
-if [ -z $DISPLAY ] ; then
-    EDITOR_ARGS="-t ${EMACSCLIENT_ARGS}"
-else
-    EDITOR_ARGS="-c ${EMACSCLIENT_ARGS}"
-fi
-
 case $TERM in
     xterm*)
         # Use 256 colors
         export TERM=xterm-256color
-        ;;
-    eterm*)
-        # We're in Emacs, no need to create new term
-        EDITOR_ARGS=${EMACSCLIENT_ARGS}
         ;;
     *)
         ;;
@@ -308,7 +298,7 @@ fi
 if [ "$TERM_PROGRAM" = "vscode" ]; then
     export EDITOR="code --wait"
 else
-    export EDITOR="${EMACS}"
+    export EDITOR="ff -w"
 fi
 
 # set PATH so it includes user's private bin if it exists
@@ -327,4 +317,4 @@ fi
 
 export EMACS_PREFIX
 export INSIDE_EMACS LC_INSIDE_EMACS
-export PATH INFOPATH MYPROJECTS ANDROID_HOME
+export PATH INFOPATH MYPROJECTS
