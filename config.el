@@ -1376,6 +1376,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (add-to-list 'ghostel-eval-cmds '("magit-status-setup-buffer" magit-status-setup-buffer))
   (add-to-list 'ghostel-eval-cmds '("read-stdin" basic/read-stdin-to-buffer-cmd))
   (add-to-list 'ghostel-eval-cmds '("basic-find-file" basic/find-file-on-host-cmd))
+  (add-to-list 'ghostel-eval-cmds '("basic-ff-cmd" basic/ff-cmd))
   (ghostel-compile-global-mode 1)
   )
 

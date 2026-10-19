@@ -1,0 +1,393 @@
+#!/usr/bin/env bash
+# -*- mode: shell-script; -*-
+#
+# ff -- open files in the running Emacs session.
+#
+#   ff [OPTION]... [FILE]...
+#   ff -                    read standard input into a buffer
+#
+# Without FILE, open the current directory.  A FILE that does not exist
+# yet is opened as a new, empty file.
+#
+# Options:
+#   -w, --wait    do not return until the editing is finished, so that ff
+#                 can be used as an editor (git commit, crontab -e, ...)
+#   -a, --async   return at once; this is the default
+#   -h, --help    show this help and exit
+#
+# With --wait, ff blocks until every buffer it opened is finished: kill
+# the buffer with C-x k, or press C-x # (`basic/ff-finish') to save and
+# kill it.  Killing a buffer without saving makes ff exit with status 1.
+#
+# Waiting for the editing to finish uses inotifywait (from
+# inotify-tools) when it is installed, and falls back to polling.
+#
+# Inside an Emacs terminal buffer (ghostel or vterm), ff opens the file
+# in the current Emacs frame through the terminal protocol.  Outside
+# Emacs, ff uses emacsclient, and falls back to a fresh Emacs when no
+# server is running.
+#
+# Environment:
+#   FF_WAIT              same as --wait when set to 1
+#   FF_OSC               1 forces, 0 forbids the terminal protocol; set
+#                        1 in a remote shell that does not inherit
+#                        INSIDE_EMACS from the local Emacs
+#   FF_STARTUP_TIMEOUT   seconds to wait for Emacs to accept a request
+#                        from a terminal buffer; default 10
+#   EMACS_PREFIX         Emacs installation prefix; default /usr
+#   EMACS_SERVERNAME     name of the Emacs server to use
+
+set -u
+
+EMACS_PREFIX=${EMACS_PREFIX:-/usr}
+EMACS=${EMACS_PREFIX}/bin/emacs
+EMACSCLIENT=${EMACS_PREFIX}/bin/emacsclient
+
+INSIDE_EMACS=${INSIDE_EMACS:-${LC_INSIDE_EMACS:-}}
+
+usage() {
+    sed -n '4,/^set -u$/p' "$0" | sed -e '$d' -e 's/^# \{0,1\}//'
+}
+
+die() {
+    printf 'ff: %s\n' "$*" >&2
+    exit 1
+}
+
+# Return a canonical absolute path.  Unlike plain realpath, do not fail
+# on a file that does not exist yet.
+resolve() {
+    local path=$1 canonical
+    if canonical=$(realpath -m -- "$path" 2>/dev/null); then
+        printf '%s\n' "$canonical"
+    else
+        case $path in
+            /*) printf '%s\n' "$path" ;;
+            *)  printf '%s/%s\n' "${PWD%/}" "$path" ;;
+        esac
+    fi
+}
+
+# Print the terminal protocol to use, if any: ghostel or vterm.
+terminal_protocol() {
+    case ${FF_OSC:-auto} in
+        0|[Nn][Oo]|[Oo][Ff][Ff]|[Ff][Aa][Ll][Ss][Ee])
+            return 1 ;;
+        1|[Yy][Ee][Ss]|[Oo][Nn]|[Tt][Rr][Uu][Ee])
+            case $INSIDE_EMACS in
+                *vterm*) printf 'vterm\n' ;;
+                *)       printf 'ghostel\n' ;;
+            esac
+            return 0 ;;
+    esac
+    case $INSIDE_EMACS in
+        *ghostel*) printf 'ghostel\n'; return 0 ;;
+        *vterm*)   printf 'vterm\n';   return 0 ;;
+    esac
+    # INSIDE_EMACS does not survive ssh; the terminal type does.  Trust
+    # it only for a session that came in over ssh, so a plain ghostty
+    # terminal still falls back to emacsclient.
+    if [ "${TERM:-}" = xterm-ghostty ] && [ -n "${SSH_CONNECTION:-}" ]; then
+        printf 'ghostel\n'
+        return 0
+    fi
+    return 1
+}
+
+# Write one escape sequence to the controlling terminal.  Emacs is the
+# terminal emulator of a ghostel or vterm buffer, so it sees the
+# sequence.  Pass the sequence through tmux or screen when they sit in
+# between.
+emit() {
+    local body=$1 term=${TERM:-} seq
+    if [ -n "${TMUX:-}" ] && { [ "${term%%-*}" = tmux ] || [ "${term%%-*}" = screen ]; }; then
+        seq=$'\ePtmux;\e\e]'"$body"$'\e\\'
+    elif [ "${term%%-*}" = screen ]; then
+        seq=$'\eP\e]'"$body"$'\e\\'
+    else
+        seq=$'\e]'"$body"$'\e\\'
+    fi
+    if [ -w /dev/tty ] && { : >/dev/tty; } 2>/dev/null; then
+        printf '%s' "$seq" > /dev/tty
+    else
+        printf '%s' "$seq"
+    fi
+}
+
+# --- waiting for the markers ------------------------------------------
+#
+# The shell must block until Emacs creates a file in the private
+# directory.  inotifywait blocks in the kernel, so nothing wakes up
+# while the user edits; where inotify-tools is missing, poll instead.
+
+WATCH_PID=
+WATCH_FD=
+
+watch_stop() {
+    if [ -n "$WATCH_PID" ]; then
+        [ -n "$WATCH_FD" ] && eval "exec $WATCH_FD<&-" 2>/dev/null
+        kill "$WATCH_PID" 2>/dev/null
+        wait "$WATCH_PID" 2>/dev/null
+        WATCH_PID=
+        WATCH_FD=
+    fi
+}
+
+# Watch DIR and prove the watch is live before returning, so Emacs can
+# create the markers as soon as the request arrives without losing an
+# event.  Return 1 when inotifywait is unavailable or unusable.
+watch_start() {
+    local dir=$1 name i=0
+
+    command -v inotifywait >/dev/null 2>&1 || return 1
+    coproc FF_WATCH {
+        exec inotifywait -m -q -e create -e moved_to -e close_write \
+             --format '%f' -- "$dir" 2>/dev/null
+    }
+    WATCH_PID=${FF_WATCH_PID:-}
+    WATCH_FD=${FF_WATCH[0]:-}
+    [ -n "$WATCH_PID" ] || return 1
+    eval "exec ${FF_WATCH[1]}>&-"        # `read' must see EOF if it dies
+
+    while :; do
+        : > "$dir/.ready"
+        if read -t 1 -u "$WATCH_FD" name && [ "$name" = .ready ]; then
+            rm -f "$dir/.ready"
+            return 0
+        fi
+        kill -0 "$WATCH_PID" 2>/dev/null || break
+        (( ++i > 10 )) && break
+    done
+    watch_stop
+    return 1
+}
+
+# Wait until FILE exists.  TIMEOUT is in seconds; empty waits forever.
+wait_for() {
+    local file=$1 timeout=${2:-} name=${1##*/} event tick=0 limit
+
+    [ -e "$file" ] && return 0
+
+    if [ -z "$WATCH_PID" ]; then
+        limit=0
+        [ -n "$timeout" ] && limit=$(( timeout * 20 ))
+        while [ ! -e "$file" ]; do
+            if [ -n "$timeout" ] && (( ++tick > limit )); then
+                return 1
+            fi
+            sleep 0.05
+        done
+        return 0
+    fi
+
+    if [ -n "$timeout" ]; then
+        if [ "$timeout" -le 0 ]; then
+            return 1
+        fi
+        limit=$(( SECONDS + timeout ))
+        while :; do
+            if read -t 1 -u "$WATCH_FD" event; then
+                [ "$event" = "$name" ] && return 0
+            elif [ -e "$file" ]; then
+                return 0
+            elif ! kill -0 "$WATCH_PID" 2>/dev/null; then
+                return 1
+            elif (( SECONDS >= limit )); then
+                return 1
+            fi
+        done
+    fi
+
+    while read -u "$WATCH_FD" event; do
+        [ "$event" = "$name" ] && return 0
+    done
+    [ -e "$file" ]
+}
+
+# Create the private directory that carries the markers for one request.
+new_donedir() {
+    DONEDIR=$(mktemp -d "${TMPDIR:-/tmp}/ff.XXXXXXXX") \
+        || die 'cannot create a temporary directory'
+    FF_TMPDIR=$DONEDIR
+}
+
+# Return 0 when the marker directory reports success.
+result() {
+    local status
+    status=$(cat -- "$1/done" 2>/dev/null) || status=1
+    [ "$status" = 0 ]
+}
+
+# Wait for the one-way terminal request to be accepted, then until the
+# editing is finished.
+await_done() {
+    local dir=$1 timeout
+
+    timeout=${FF_STARTUP_TIMEOUT:-10}
+    case $timeout in
+        ''|*[!0-9]*) timeout=10 ;;
+    esac
+
+    if ! wait_for "$dir/started" "$timeout"; then
+        printf 'ff: Emacs did not accept the request.\n' >&2
+        printf 'ff: is "basic-ff-cmd" in ghostel-eval-cmds?\n' >&2
+        return 1
+    fi
+    wait_for "$dir/done" || return 1
+    result "$dir"
+}
+
+# Quote one argument as a Lisp or ghostel string literal.
+quote() {
+    local arg=${1//\\/\\\\}
+    printf '"%s"' "${arg//\"/\\\"}"
+}
+
+# Open PATHS in the ghostel or vterm buffer that runs this shell.  The
+# terminal protocol is one way, so `started' is the only proof that
+# Emacs took the request.
+open_in_terminal() {
+    local payload="\"basic-ff-cmd\"" arg
+
+    if (( WAIT )); then
+        new_donedir
+        # Watch before the request goes out, so no marker is missed.
+        watch_start "$DONEDIR" || WATCH_PID=
+    fi
+    for arg in "$DONEDIR" "$KIND" "$@"; do
+        payload+=" $(quote "$arg")"
+    done
+    case $PROTOCOL in
+        vterm) emit "51;E$payload" ;;
+        *)     emit "52;e;$payload" ;;
+    esac
+    if (( WAIT )); then
+        await_done "$DONEDIR"
+        return $?
+    fi
+    return 0
+}
+
+# Open PATHS through emacsclient.  Only standard input takes this path:
+# an ordinary file is visited by emacsclient itself, which waits for
+# C-x # natively.  An eval cannot block, so a wait watches `done' here.
+open_via_client() {
+    local lisp="(basic/ff-cmd" arg
+
+    (( WAIT )) && new_donedir
+    for arg in "$DONEDIR" "$KIND" "$@"; do
+        lisp+=" $(quote "$arg")"
+    done
+    lisp+=")"
+
+    if (( WAIT )); then
+        "$EMACSCLIENT" "${SERVER_ARGS[@]}" -e "$lisp" >/dev/null \
+            || die 'emacsclient could not evaluate basic-ff-cmd'
+        watch_start "$DONEDIR" || WATCH_PID=
+        wait_for "$DONEDIR/done" || return 1
+        result "$DONEDIR"
+    else
+        "$EMACSCLIENT" -n "${SERVER_ARGS[@]}" -e "$lisp" >/dev/null \
+            || die 'emacsclient could not evaluate basic-ff-cmd'
+    fi
+}
+
+WAIT=${FF_WAIT:-0}
+(( WAIT )) && WAIT=1
+STDIN=0
+FILES=()
+
+while (( $# )); do
+    case $1 in
+        -w|--wait)  WAIT=1 ;;
+        -a|--async) WAIT=0 ;;
+        -h|--help)  usage; exit 0 ;;
+        --)         shift; break ;;
+        -)          STDIN=1 ;;
+        -*)         printf 'ff: unknown option: %s\n' "$1" >&2
+                    usage >&2
+                    exit 2 ;;
+        *)          FILES+=("$1") ;;
+    esac
+    shift
+done
+while (( $# )); do
+    FILES+=("$1")
+    shift
+done
+
+if (( STDIN )) && (( ${#FILES[@]} )); then
+    die '"-" cannot be combined with file names'
+fi
+
+DONEDIR=
+FF_TMPDIR=
+STDIN_FILE=
+cleanup() {
+    watch_stop
+    [ -n "$STDIN_FILE" ] && rm -f -- "$STDIN_FILE"
+    [ -n "$FF_TMPDIR" ] && rm -rf -- "$FF_TMPDIR"
+}
+trap cleanup EXIT
+
+if (( STDIN )); then
+    STDIN_FILE=$(mktemp "${TMPDIR:-/tmp}/ff-stdin.XXXXXXXX") \
+        || die 'cannot create a temporary file'
+    cat > "$STDIN_FILE"
+    KIND=stdin
+    FILES=("$STDIN_FILE")
+else
+    KIND=file
+    (( ${#FILES[@]} )) || FILES=(.)
+fi
+
+PATHS=()
+for file in "${FILES[@]}"; do
+    PATHS+=("$(resolve "$file")")
+done
+
+if PROTOCOL=$(terminal_protocol); then
+    open_in_terminal "${PATHS[@]}"
+    exit $?
+fi
+
+[ -x "$EMACSCLIENT" ] || die "cannot find emacsclient: $EMACSCLIENT"
+
+CLIENT_ARGS=()
+SERVER_ARGS=()
+if [ -n "${EMACS_SERVERNAME:-}" ]; then
+    CLIENT_ARGS+=(-s "$EMACS_SERVERNAME")
+    SERVER_ARGS+=(-s "$EMACS_SERVERNAME")
+fi
+case ${TERM:-} in
+    eterm*) ;;
+    *) if [ -z "${DISPLAY:-}" ]; then
+           CLIENT_ARGS+=(-t)
+       else
+           CLIENT_ARGS+=(-c)
+       fi ;;
+esac
+
+# Standard input only makes sense in a running Emacs, which must be
+# reached through the server.
+if (( STDIN )); then
+    "$EMACSCLIENT" "${SERVER_ARGS[@]}" -e t >/dev/null 2>&1 \
+        || die '"ff -" needs a running Emacs server'
+    open_via_client "${PATHS[@]}"
+    exit $?
+fi
+
+if "$EMACSCLIENT" "${SERVER_ARGS[@]}" -e t >/dev/null 2>&1; then
+    if (( WAIT )); then
+        exec "$EMACSCLIENT" "${CLIENT_ARGS[@]}" "${PATHS[@]}"
+    else
+        exec "$EMACSCLIENT" -n "${CLIENT_ARGS[@]}" "${PATHS[@]}"
+    fi
+fi
+
+if (( WAIT )); then
+    # No server: start a daemon, open a frame, and block until C-x #.
+    exec "$EMACSCLIENT" -a '' "${CLIENT_ARGS[@]}" "${PATHS[@]}"
+else
+    exec "$EMACSCLIENT" -n -a "$EMACS" "${CLIENT_ARGS[@]}" "${PATHS[@]}"
+fi

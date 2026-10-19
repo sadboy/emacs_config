@@ -145,32 +145,185 @@ path."
     (message "Tab width set to %d (was %d)" arg tab-width)
     (setq tab-width arg)))
 
+(defun basic/ff--host-path (path remote)
+  "Return PATH as seen from the host with tramp prefix REMOTE.
+REMOTE is nil for the local host."
+  (if (and remote
+           (file-name-absolute-p path)
+           (not (string-prefix-p remote path)))
+      (concat remote path)
+    path))
+
+(defun basic/read-stdin-to-buffer (tmpfile)
+  "Return a new buffer with the contents of TMPFILE.
+TMPFILE names a file on the host that runs Emacs; delete it after
+reading it."
+  (let ((buffer (create-file-buffer "<stdin>")))
+    (unwind-protect
+        (condition-case err
+            (with-current-buffer buffer
+              (insert-file-contents tmpfile)
+              (set-buffer-modified-p nil))
+          (error
+           (kill-buffer buffer)
+           (signal (car err) (cdr err))))
+      (ignore-errors (delete-file tmpfile)))
+    buffer))
+
 ;;;###autoload
 (defun basic/read-stdin-to-buffer-cmd (tmpfile)
   "Emacs-side function for reading stdin to a buffer.
 Meant to be called from e.g. emacsclient or vterm"
-  (let* ((b (create-file-buffer "<stdin>"))
-         (maybe-remote-prefix (file-remote-p default-directory))
-         (tmpfile (if maybe-remote-prefix
-                      (concat maybe-remote-prefix tmpfile)
-                    tmpfile)))
-    (switch-to-buffer b)
-    (insert-file-contents tmpfile)
-    (delete-file tmpfile)))
+  (switch-to-buffer
+   (basic/read-stdin-to-buffer
+    (basic/ff--host-path tmpfile (file-remote-p default-directory)))))
 
 ;;;###autoload
 (defun basic/find-file-on-host-cmd (file)
   "Like `find-file', but scoped to the tramp remote prefix of `default-directory'
 Meant to be called from e.g. emacsclient or vterm"
-  (let* ((maybe-remote-prefix (file-remote-p default-directory))
-         (file
-          (cond
-           ((not (file-name-absolute-p file))
-            file)
-           (maybe-remote-prefix
-            (concat maybe-remote-prefix file))
-           (t file))))
+  (find-file (basic/ff--host-path file (file-remote-p default-directory))))
+
+;;; Waiting for the `ff' shell script
+;;
+;; `emacs_cmd' and `vterm_cmd' are one-way, so the shell cannot learn
+;; when the editing is done.  In wait mode the shell therefore passes a
+;; private directory: we drop `started' into it at once, and `done',
+;; holding the exit status, when every buffer opened for the request is
+;; finished.
+
+(defvar basic/ff--sessions (make-hash-table :test #'equal)
+  "Pending `ff' wait requests, keyed by their done file.
+Each value is a list (REMAINING STATUS BUFFERS).")
+
+(defvar-local basic/ff--session-keys nil
+  "Done files of the `ff' wait requests that wait for this buffer.")
+
+(defvar basic/ff-verbose t
+  "When non-nil, say how to finish a buffer opened by `ff --wait'.")
+
+(defun basic/ff--write (file text)
+  "Write TEXT to FILE, atomically when possible.  Never signal an error."
+  (condition-case nil
+      (let ((tmp (concat file ".tmp")))
+        (with-temp-file tmp
+          (insert text))
+        (rename-file tmp file t))
+    (error
+     (condition-case err
+         (with-temp-file file
+           (insert text))
+       (error (message "ff: cannot write %s: %s"
+                       file (error-message-string err)))))))
+
+(defun basic/ff--finish (status)
+  "Finish the `ff' wait requests that wait for the current buffer.
+STATUS 1 marks them as failed."
+  (let ((keys basic/ff--session-keys))
+    (setq basic/ff--session-keys nil)
+    (dolist (done keys)
+      (let ((session (gethash done basic/ff--sessions)))
+        (when session
+          (setcar session (1- (car session)))
+          (when (= status 1)
+            (setcar (cdr session) 1))
+          (when (<= (car session) 0)
+            (remhash done basic/ff--sessions)
+            (basic/ff--write done (format "%d\n" (cadr session)))))))))
+
+(defun basic/ff--kill-hook ()
+  "Finish the `ff' wait requests when the current buffer is killed."
+  (basic/ff--finish (if (buffer-modified-p) 1 0)))
+
+(defun basic/ff-finish ()
+  "Save the buffer and finish the `ff' wait request."
+  (interactive)
+  (when (buffer-modified-p)
+    (save-buffer))
+  (basic/ff--finish 0)
+  (kill-buffer))
+
+(defun basic/ff-cancel ()
+  "Cancel the `ff' wait request without saving the buffer."
+  (interactive)
+  (when (or (not (buffer-modified-p))
+            (yes-or-no-p "Discard changes and cancel? "))
+    (basic/ff--finish 1)
+    (set-buffer-modified-p nil)
+    (kill-buffer)))
+
+(define-minor-mode basic/ff-mode
+  "Minor mode for buffers opened by `ff --wait'.
+Finish with \\[basic/ff-finish], which saves and kills the buffer, or
+by killing the buffer with \\[kill-buffer]."
+  :lighter " ff"
+  :keymap (let ((map (make-sparse-keymap)))
+            (define-key map (kbd "C-x #") #'basic/ff-finish)
+            map))
+
+(defun basic/ff--open (file kind)
+  "Open FILE and return its buffer.
+FILE names a file on the host that runs Emacs.  KIND is \"file\" for
+an ordinary file, or \"stdin\" for a temporary file that holds
+standard input."
+  (if (equal kind "stdin")
+      (basic/read-stdin-to-buffer file)
     (find-file file)))
+
+;;;###autoload
+(defun basic/ff-cmd (donedir kind &rest files)
+  "Open FILES in this Emacs; the Emacs side of the `ff' shell script.
+DONEDIR is a directory on the host where the shell runs.  When it is
+not empty, create DONEDIR/started at once and DONEDIR/done when all
+buffers opened here are finished; `done' holds \"0\" on success, or
+\"1\" on failure.  KIND is \"file\", or \"stdin\" for temporary files
+that hold standard input."
+  (let* ((remote (file-remote-p default-directory))
+         (host (lambda (path) (basic/ff--host-path path remote)))
+         (donedir (unless (equal donedir "") (funcall host donedir)))
+         (started (and donedir (concat donedir "/started")))
+         (done (and donedir (concat donedir "/done")))
+         (failed nil)
+         buffers)
+    (when started
+      (basic/ff--write started ""))
+    (dolist (file files)
+      (let ((buffer (condition-case err
+                        (basic/ff--open (funcall host file) kind)
+                      (error
+                       (setq failed t)
+                       (message "ff: %s: %s" file (error-message-string err))
+                       nil))))
+        (when (and (bufferp buffer) (buffer-live-p buffer))
+          (unless (memq buffer buffers)
+            (push buffer buffers))
+          (when (equal kind "stdin")
+            (switch-to-buffer buffer)))))
+    (setq buffers (nreverse buffers))
+    (cond
+     ((null donedir))
+     ((null buffers)
+      (basic/ff--write done "1\n"))
+     (t
+      (puthash done (list (length buffers) (if failed 1 0) buffers)
+               basic/ff--sessions)
+      (dolist (buffer buffers)
+        (with-current-buffer buffer
+          (unless (member done basic/ff--session-keys)
+            (push done basic/ff--session-keys))
+          (add-hook 'kill-buffer-hook #'basic/ff--kill-hook nil t)
+          (basic/ff-mode 1)))
+      (when basic/ff-verbose
+        (message "ff: finish with C-x # or by killing the buffer"))))))
+
+(defun basic/ff--flush-sessions ()
+  "Give up on all pending `ff' wait requests, e.g. when Emacs exits."
+  (maphash (lambda (done _session)
+             (basic/ff--write done "1\n"))
+           basic/ff--sessions)
+  (setq basic/ff--sessions (make-hash-table :test #'equal)))
+
+(add-hook 'kill-emacs-hook #'basic/ff--flush-sessions)
 
 (defun basic/action-from-isearch (action)
   "Invoke `action' on the current isearch query."
