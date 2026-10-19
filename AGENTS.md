@@ -22,7 +22,7 @@ This repo contains my personal Emacs and Bash configurations files.
 - `bash.linux` — Bash configuration for Linux. It sets up Emacs and vterm
   integration and adds the private `bin` directories to `PATH`.
 - `bin/install-jdtls.sh` — Installs the Eclipse JDT language server on Ubuntu and macOS.
-- `bin/ff` — Opens files in the running Emacs. With `-w` it waits until the
-  editing is finished, so it can serve as `$EDITOR`. Talks to Emacs either
-  through `emacsclient` or, inside ghostel/vterm, through the terminal
-  protocol and the `basic/ff-cmd` wait protocol.
+- `bin/ff` — Opens files in the running Emacs if one exists, otherwise starts a
+  new Emacs process and connects to it. Talks to Emacs either through
+  `emacsclient` or, if inside ghostel/vterm, through the terminal protocol and
+  the `basic/ff-cmd` wait protocol.

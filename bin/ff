@@ -10,14 +10,15 @@
 # yet is opened as a new, empty file.
 #
 # Options:
-#   -w, --wait    do not return until the editing is finished, so that ff
-#                 can be used as an editor (git commit, crontab -e, ...)
-#   -a, --async   return at once; this is the default
-#   -h, --help    show this help and exit
+#   -w, --wait     wait until the editing is finished; this is the default
+#   -n, --no-wait  return at once, like `emacsclient -n'
+#   -h, --help     show this help and exit
 #
-# With --wait, ff blocks until every buffer it opened is finished: kill
-# the buffer with C-x k, or press C-x # (`basic/ff-finish') to save and
-# kill it.  Killing a buffer without saving makes ff exit with status 1.
+# ff blocks until every buffer it opened is finished: kill the buffer
+# with C-x k, or press C-x # (`basic/ff-finish') to save and kill it.
+# Killing a buffer without saving makes ff exit with status 1.  Waiting
+# matches `emacsclient', so ff can serve as $EDITOR; use -n for the old
+# fire-and-forget behavior.
 #
 # Waiting for the editing to finish uses inotifywait (from
 # inotify-tools) when it is installed, and falls back to polling.
@@ -28,7 +29,7 @@
 # server is running.
 #
 # Environment:
-#   FF_WAIT              same as --wait when set to 1
+#   FF_WAIT              initial value of -w/-n; default 1
 #   FF_OSC               1 forces, 0 forbids the terminal protocol; set
 #                        1 in a remote shell that does not inherit
 #                        INSIDE_EMACS from the local Emacs
@@ -292,15 +293,15 @@ open_via_client() {
     fi
 }
 
-WAIT=${FF_WAIT:-0}
-(( WAIT )) && WAIT=1
+WAIT=${FF_WAIT:-1}
+(( WAIT )) && WAIT=1 || WAIT=0
 STDIN=0
 FILES=()
 
 while (( $# )); do
     case $1 in
-        -w|--wait)  WAIT=1 ;;
-        -a|--async) WAIT=0 ;;
+        -w|--wait)    WAIT=1 ;;
+        -n|--no-wait) WAIT=0 ;;
         -h|--help)  usage; exit 0 ;;
         --)         shift; break ;;
         -)          STDIN=1 ;;
