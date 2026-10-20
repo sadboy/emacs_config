@@ -1052,13 +1052,13 @@ items whose backend uses a custom `imenu-default-goto-function'."
 
   (defun my/corfu--capf-list ()
     "Return the effective `completion-at-point-functions'.
-A `t' element stands for the global default value, like in a hook."
-    (let ((global (default-value 'completion-at-point-functions))
-          result)
+We always run the global `completion-at-point-functions' first. Any `t'
+marker in the local value is ignored."
+    (let ((result (default-value 'completion-at-point-functions)))
       (dolist (capf completion-at-point-functions)
-        (setq result (if (eq capf t) (append result global)
+        (setq result (if (eq capf t) result
                        (append result (list capf)))))
-      (seq-filter #'functionp result)))
+      (delete-dups (seq-filter #'functionp result))))
 
   (defvar my/corfu--no-expand nil
     "Non-nil while `M-/' triggers completion.
@@ -1174,8 +1174,8 @@ candidate ends the session, so the next invocation starts over."
 (use-package cape
   :ensure t
   :init
-  ;; Add dabbrev to the default completion-at-point-functions
-  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+  ;; Add dabbrev to the global completion-at-point-functions
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
   :config
   (setq cape-dabbrev-buffer-function #'cape-text-buffers))
 
