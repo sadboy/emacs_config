@@ -420,7 +420,11 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
   :ensure t
   :hook (tty-setup . global-kkp-mode)
   :config
-  (setq xterm-extra-capabilities '(getSelection setSelection modifyOtherKeys))
+  ;; `getSelection' is deliberately absent: it makes `gui-get-selection'
+  ;; query the terminal over OSC 52 and block (up to `xterm-query-timeout',
+  ;; 2s) waiting for a reply that most terminals never send, which stalls
+  ;; `yank' in every client frame until the next input event arrives.
+  (setq xterm-extra-capabilities '(setSelection modifyOtherKeys))
   ;; (setq kkp-active-enhancements '(disambiguate-escape-codes))
   ;;(setq kkp-alt-modifier 'meta) ;; use this if you want to map the Alt keyboard
   ;; modifier to Alt in Emacs (and not to Meta)
