@@ -339,7 +339,6 @@ if (( STDIN )); then
     FILES=("$STDIN_FILE")
 else
     KIND=file
-    (( ${#FILES[@]} )) || FILES=(.)
 fi
 
 PATHS=()
