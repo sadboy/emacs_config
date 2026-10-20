@@ -378,17 +378,8 @@ if (( STDIN )); then
     exit $?
 fi
 
-if "$EMACSCLIENT" "${SERVER_ARGS[@]}" -e t >/dev/null 2>&1; then
-    if (( WAIT )); then
-        exec "$EMACSCLIENT" "${CLIENT_ARGS[@]}" "${PATHS[@]}"
-    else
-        exec "$EMACSCLIENT" -n "${CLIENT_ARGS[@]}" "${PATHS[@]}"
-    fi
-fi
-
 if (( WAIT )); then
-    # No server: start a daemon, open a frame, and block until C-x #.
-    exec "$EMACSCLIENT" -a '' "${CLIENT_ARGS[@]}" "${PATHS[@]}"
+    exec "$EMACSCLIENT" -a "$EMACS" "${CLIENT_ARGS[@]}" "${PATHS[@]}"
 else
     exec "$EMACSCLIENT" -n -a "$EMACS" "${CLIENT_ARGS[@]}" "${PATHS[@]}"
 fi
