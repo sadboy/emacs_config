@@ -168,6 +168,10 @@
 ;; }}}
 
 ;; {{{ Builtin packages:
+(use-package server
+  :if (daemonp)
+  :config
+  (server-stop-automatically 'delete-frame))
 (use-package tramp
   :defer t
   :init

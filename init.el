@@ -86,10 +86,10 @@
   :config
   (load-theme 'doom-one t))
 
-;; (condition-case err
-;;     (server-start)
-;;   (error
-;;    (message "Warning: Could not start Emacs server: %s" (error-message-string err))))
+(let ((name (getenv "EMACS_SERVERNAME")))
+  (when name
+    (setq server-name name)
+    (server-start)))
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
