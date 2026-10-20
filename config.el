@@ -658,7 +658,24 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
         ;; Filter with the C-implemented `all-completions' (fastest), then
         ;; score the filtered subset with flx:
         fussy-filter-fn 'fussy-filter-default
-        fussy-use-cache t))
+        fussy-use-cache nil)
+
+  ;; `fussy--all-cache' is keyed on the input string only, not on the
+  ;; completion table.  At the same input another table would get the
+  ;; candidates cached for the previous one, which breaks switching backends
+  ;; with `M-/' in Corfu.  Keep the cache per table instead.
+  ;; (defvar-local my/fussy--cached-table nil
+  ;;   "Completion table `fussy--all-cache' holds candidates for.")
+
+  ;; (defun my/fussy--cache-per-table (orig string table &rest args)
+  ;;   "Call ORIG with STRING, TABLE and ARGS, invalidating the cache on table change."
+  ;;   (unless (eq table my/fussy--cached-table)
+  ;;     (setq my/fussy--cached-table table
+  ;;           fussy--all-cache (make-hash-table :test #'equal)))
+  ;;   (apply orig string table args))
+
+  ;; (advice-add 'fussy-all-completions :around #'my/fussy--cache-per-table)
+  )
 
 ;; The flx algorithm implemented as a Rust dynamic module, about 10x faster
 ;; than the Emacs Lisp implementation.  Not on MELPA; the repository ships
@@ -994,17 +1011,108 @@ items whose backend uses a custom `imenu-default-goto-function'."
 (use-package corfu
   :ensure t
   :bind
-  (("M-/" . #'completion-at-point)    ; Manual completion trigger
+  (("M-/" . #'my/corfu-cycle-backend) ; Manual completion trigger, cycles backends
    )
   (:map corfu-map
-        ("M-/" . #'corfu-scroll-down))
+        ("M-/" . #'my/corfu-cycle-backend))
 
   :preface
+  (defvar-local my/corfu-backend-list nil
+    "Capfs of the current completion session.")
+
+  (defvar-local my/corfu-backend-index nil
+    "Index of the active Capf in `my/corfu-backend-list'.")
+
+  (defun my/corfu-backend-reset ()
+    "End the backend cycling session."
+    (setq my/corfu-backend-list nil
+          my/corfu-backend-index nil))
+
+  (defun my/corfu--capf-name (capf)
+    "Return the name of CAPF."
+    (if (symbolp capf) (symbol-name capf) (format "%s" capf)))
+
+  (defun my/corfu--capf-available-p (capf)
+    "Return non-nil if CAPF provides candidates at point."
+    (when (functionp capf)
+      (pcase (ignore-errors (funcall capf))
+        (`(,beg ,end ,table . ,plist)
+         (and (integer-or-marker-p beg)
+              (<= beg (point) end)
+              (let* ((str (buffer-substring-no-properties beg end))
+                     (pt (- (point) beg))
+                     (pred (plist-get plist :predicate))
+                     (md (completion-metadata (substring str 0 pt) table pred)))
+                (ignore-errors
+                  (and (completion-all-completions str table pred pt md) t))))))))
+
+  (defun my/corfu--capf-list ()
+    "Return the effective `completion-at-point-functions'.
+A `t' element stands for the global default value, like in a hook."
+    (let ((global (default-value 'completion-at-point-functions))
+          result)
+      (dolist (capf completion-at-point-functions)
+        (setq result (if (eq capf t) (append result global)
+                       (append result (list capf)))))
+      (seq-filter #'functionp result)))
+
+  (defvar my/corfu--no-expand nil
+    "Non-nil while `M-/' triggers completion.
+Completion styles such as `fussy' expand the input to the longest common
+prefix of the candidates.  The expansion must be suppressed when the
+user only wants to browse backends.")
+
+  (defun my/corfu--try-completion-no-expand (orig str table pred pt &optional md)
+    "Call ORIG with STR, TABLE, PRED, PT and MD, but keep STR unchanged.
+ORIG computes the completion result; when `my/corfu--no-expand' is
+non-nil its expansion is replaced by STR and PT."
+    (let ((result (funcall orig str table pred pt md)))
+      (if (and my/corfu--no-expand result)
+          (cons str pt)
+        result)))
+
+  (defun my/corfu-cycle-backend ()
+    "Trigger completion, cycling through the Capfs at point.
+The first invocation starts a completion session at the first Capf of
+`completion-at-point-functions'.  Later invocations cycle forward and
+skip Capfs which offer no candidates.  Cancelling or inserting a
+candidate ends the session, so the next invocation starts over."
+    (interactive)
+    (let ((active (and (bound-and-true-p completion-in-region-mode)
+                       my/corfu-backend-list
+                       (integerp my/corfu-backend-index))))
+      (unless active (my/corfu-backend-reset))
+      (let* ((backends (if active
+                           my/corfu-backend-list
+                         (setq my/corfu-backend-list (my/corfu--capf-list))))
+             (count (length backends))
+             (start (if active (1+ my/corfu-backend-index) 0))
+             (found nil))
+        (when (zerop count) (user-error "No completion-at-point function"))
+        (let ((i 0))
+          (while (and (not found) (< i count))
+            (let* ((idx (mod (+ start i) count))
+                   (capf (nth idx backends)))
+              (if (my/corfu--capf-available-p capf)
+                  (setq found (cons idx capf))
+                (setq i (1+ i))))))
+        (cond
+         ((null found)
+          (message "No %scompletion backend at point" (if active "other " "")))
+         ((and active (= (car found) my/corfu-backend-index))
+          (message "Only completion backend: %s" (my/corfu--capf-name (cdr found))))
+         (t
+          (setq my/corfu-backend-index (car found))
+          (let ((completion-at-point-functions (list (cdr found)))
+                (my/corfu--no-expand t))
+            (completion-at-point))
+          (message "Completion backend: %s" (my/corfu--capf-name (cdr found))))))))
+
   (defconst my/corfu-accept-and-insert-list '(" " "." "," "/" ";" ":" "?" "!" "-" "="
                                               "[" "]" "(" ")" "{" "}" "|" "\\" "'" "`"
                                               "<" ">" "\M-(" "\"" "_" "+" "~"
                                               ;; "\M-f" "\M-b"
-                                              "\M-a" "\M-e"
+                                              "\M-a" "\M-e" "\C-a" "\C-e"
                                               ))
 
   (defun my/corfu-pass-through ()
@@ -1026,6 +1134,8 @@ items whose backend uses a custom `imenu-default-goto-function'."
   :config
   (keymap-unset corfu-map "<tab>")      ; Reserve for copilot
   (keymap-unset corfu-map "C-<tab>")      ; Reserve for copilot
+  (advice-add #'corfu-insert :after #'my/corfu-backend-reset) ; Accept ends the cycle
+  (advice-add #'corfu--try-completion :around #'my/corfu--try-completion-no-expand)
 
   (dolist (key my/corfu-accept-and-insert-list)
     (define-key corfu-map key #'my/corfu-accept-and-passthrough))
@@ -1034,7 +1144,7 @@ items whose backend uses a custom `imenu-default-goto-function'."
   (setq corfu-align-annotations t)      ; company-tooltip-align-annotations t
   (setq corfu-preselect 'valid)
   (setq corfu-preview-current nil)
-  (setq corfu-on-exact-match 'show)
+  (setq corfu-on-exact-match nil)
   (setq corfu-cycle t)
   (setq corfu-quit-no-match nil)
   (setq corfu-border-width 3)
@@ -1061,7 +1171,9 @@ items whose backend uses a custom `imenu-default-goto-function'."
   :ensure t
   :init
   ;; Add dabbrev to the default completion-at-point-functions
-  (add-to-list 'completion-at-point-functions #'cape-dabbrev))
+  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+  :config
+  (setq cape-dabbrev-buffer-function #'cape-text-buffers))
 
 (use-package ace-window)
 
