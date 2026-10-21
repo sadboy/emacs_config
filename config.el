@@ -1115,23 +1115,26 @@ candidate ends the session, so the next invocation starts over."
   (defconst my/corfu-accept-and-insert-list '(" " "." "," "/" ";" ":" "?" "!" "-" "="
                                               "[" "]" "(" ")" "{" "}" "|" "\\" "'" "`"
                                               "<" ">" "\M-(" "\"" "_" "+" "~"
-                                              ;; "\M-f" "\M-b"
+                                              "\M-f" "\M-b"
                                               "\M-a" "\M-e" "\C-a" "\C-e"
                                               ))
 
-  (defun my/corfu-pass-through ()
-    (let* ((event-vec (vector last-input-event))
-           (local-map (current-local-map))
-           (command
-            (or (and local-map (lookup-key local-map event-vec))
-                (lookup-key (current-global-map) event-vec))))
+  (defun my/corfu-pass-through (keys)
+    "Run the command that KEYS invoke when completion is inactive.
+KEYS is a key sequence vector.  Do not use `last-input-event' here:
+terminals with the kitty keyboard protocol (kkp) deliver the key
+through `input-decode-map', and the decoder's `read-event' calls leave
+`last-input-event' at the last raw byte of the escape sequence, not at
+the translated key."
+    (let ((command (key-binding keys)))
       (when (commandp command) (call-interactively command))))
 
   (defun my/corfu-accept-and-passthrough ()
-    "Perform the completion, then the same command again."
+    "Accept the current candidate, then run the key's own command."
     (interactive)
-    (corfu-insert)
-    (my/corfu-pass-through))
+    (let ((keys (this-command-keys-vector)))
+      (corfu-insert)
+      (my/corfu-pass-through keys)))
 
   :init
   (global-corfu-mode t)
@@ -1345,10 +1348,7 @@ candidate ends the session, so the next invocation starts over."
     ;;                  'hydra-window/body)))
 
     ("i" ace-maximize-window)
-    ("/" (progn
-           (winner-undo)
-           (setq this-command 'winner-undo))
-     )
+    ("/" winner-undo)
     ("?" winner-redo)
     )
 
@@ -1407,6 +1407,7 @@ _h_   _l_   _o_k        _y_ank
    ("C-s-j" . #'basic/buf-combine-down)
    ("C-s-k" . #'basic/buf-combine-up)
    ("C-s-l" . #'basic/buf-combine-right)
+   ("C-s-/" . #'winner-undo)
    ;; For terminal:
    ("<f9>" . #'basic/focus-window-left)
    ("<f10>" . #'basic/focus-window-down)
