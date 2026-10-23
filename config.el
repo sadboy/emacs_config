@@ -621,6 +621,13 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
         ("C-k" . #'kill-line)
         ("RET" . #'vertico-directory-enter)
         ("DEL" . #'vertico-directory-delete-char)))
+
+(use-package vertico-repeat
+  :ensure nil
+  :after vertico
+  :config
+  (add-hook 'minibuffer-setup-hook #'vertico-repeat-save))
+
 ;; (use-package vertico-posframe
 ;;   :after vertico
 ;;   :config
