@@ -70,6 +70,7 @@
       read-file-name-completion-ignore-case t
       read-buffer-completion-ignore-case t
 
+      text-mode-ispell-word-completion nil
       ispell-process-directory (expand-file-name "~/")
       flyspell-issue-message-flag nil
       flymake-start-syntax-check-on-newline nil
@@ -618,7 +619,7 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
   :bind
   (:map vertico-map
         ("C-k" . #'kill-line)
-        ("RET" . #'vertico-directory-enter) ; Mimics ivy-alt-done for directories
+        ("RET" . #'vertico-directory-enter)
         ("DEL" . #'vertico-directory-delete-char)))
 ;; (use-package vertico-posframe
 ;;   :after vertico
@@ -642,7 +643,6 @@ re-enters the connection setup and exhausts `max-lisp-eval-depth'.")
 ;;   ;; (vertico-posframe-mode 1)
 ;; )
 
-;; 2. ORDERLESS: Completion style (mimics ivy-re-builders-alist)
 (use-package orderless
   :ensure t
   :config
@@ -1180,6 +1180,9 @@ the translated key."
   ;; Add dabbrev to the global completion-at-point-functions
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   :config
+  (setq cape-dict-file (expand-file-name "~/emacs/config/dicts/en.txt")
+        cape-dict-limit 100
+        cape-dict-case-fold t)
   (setq cape-dabbrev-buffer-function #'cape-text-buffers))
 
 (use-package ace-window)
@@ -2264,6 +2267,7 @@ current buffer.
   (when (fboundp 'symbol-overlay-mode)
     (symbol-overlay-mode t)
     (symbol-overlay-nav-mode t))
+  (add-hook 'completion-at-point-functions #'cape-dict 100 t)
   )
 
 (use-package prog-mode
@@ -2480,8 +2484,8 @@ current buffer.
     (visual-line-mode t)
     (setq require-final-newline nil)
     (modify-syntax-entry ?' ".")
-    ;; (setq completion-at-point-functions
-    ;;       (append '(cape-dabbrev) completion-at-point-functions))
+
+    (add-hook 'completion-at-point-functions #'cape-dict 0 t)
     )
   :config
   (add-hook 'text-mode-hook 'my-text-mode-hook)
