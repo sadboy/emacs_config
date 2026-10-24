@@ -2323,7 +2323,6 @@ current buffer.
     (c-set-offset 'statement-case-open '+)
     (c-toggle-hungry-state 1)
     (setq c-basic-offset 4
-          tab-width 8
           indent-tabs-mode nil
           indicate-empty-lines t
           hs-isearch-open nil)
@@ -2544,7 +2543,7 @@ current buffer.
   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
         doom-themes-enable-italic t) ; if nil, italics is universally disabled
   (setq doom-one-brighter-comments t
-        doom-one-brighter-modeline t)
+        doom-one-brighter-modeline nil)
   ;; (load-theme 'doom-one t)
 
   ;; Enable flashing mode-line on errors
