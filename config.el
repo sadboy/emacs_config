@@ -2473,14 +2473,23 @@ current buffer.
 
 (use-package go-mode
   :no-require t
+  :defer t
   :config
   (add-hook 'go-mode-hook 'eglot-ensure))
 
-;; (use-package beardbolt
-;;   :vc t
-;;   :load-path "~/emacs/beardbolt/")
 (use-package rmsbolt
-  :no-require t)
+  :vc (:url "https://github.com/sadboy/rmsbolt.git")
+  :no-require t
+  :defer t
+  :bind
+  ("C-c b" . #'rmsbolt-mode)
+  (:map rmsbolt-mode-map
+        ("C-c C-k" . (lambda () (interactive) (rmsbolt-mode -1))))
+  (:map ctrl-x-comma-map
+        ("b" . #'rmsbolt-mode))
+  :config
+  (setq rmsbolt-automatic-recompile nil)
+  )
 
 (use-package text-mode
   :preface
