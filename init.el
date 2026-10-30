@@ -60,7 +60,12 @@
 		 "NIX_SSL_CERT_FILE"
 		 "NIX_PATH"))
   (add-to-list 'exec-path-from-shell-variables var))
-  (exec-path-from-shell-initialize))
+  (exec-path-from-shell-initialize)
+  (set-face-attribute 'default nil
+                    ;; :family "Hack Nerd Font Mono"
+                    :family "Menlo"
+                    :height 140              ; 140 = 14pt (units are 1/10 pt)
+                    :weight 'light))
 
 (use-package config
   :vc t
