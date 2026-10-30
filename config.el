@@ -1756,6 +1756,20 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   :hook
   (org-mode . org-bullets-mode))
 
+(use-package org-tree-slide
+  :bind
+  ("<f8>" . #'org-tree-slide-mode)
+  ("S-<f8>" . #'org-tree-slide-skip-done-toggle)
+  (:map org-tree-slide-mode-map
+        ("C-<" . nil)
+        ("C->" . nil)
+        ("<f7>" . #'org-tree-slide-move-previous-tree)
+        ("<f9>" . #'org-tree-slide-move-next-tree)
+        )
+  :config
+  (setq org-tree-slide-skip-outline-level 4)
+  )
+
 (use-package org-present
   :no-require t
   :hook
