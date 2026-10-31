@@ -1757,6 +1757,7 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   (org-mode . org-bullets-mode))
 
 (use-package org-tree-slide
+  :no-require t
   :bind
   ("<f8>" . #'org-tree-slide-mode)
   ("S-<f8>" . #'org-tree-slide-skip-done-toggle)
