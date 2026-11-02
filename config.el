@@ -2556,6 +2556,40 @@ current buffer.
   (autoload 'asdl-mode "asdl-plain" nil t)
   :mode ("\\.asdl\\'" . asdl-mode)
   :hook (asdl-mode . my-prog-mode-hook))
+
+(use-package asm-mode
+  :defer t
+  :preface
+  (defun my/asm--imenu-create-index ()
+    "Return an imenu index for the current assembler buffer.
+
+Each label becomes a top-level entry, in textual order.  A label
+needs a colon at the end of its name, so an instruction does not
+become an entry.  Matches inside comments are ignored.  Positions
+are markers when `imenu-use-markers' is non-nil."
+    (save-excursion
+      (goto-char (point-min))
+      (let ((label-re "^[ \t]*\\([[:alpha:]_.$][[:alnum:]_.$]*\\):")
+            labels)
+        (while (re-search-forward label-re nil t)
+          (let ((name (match-string-no-properties 1))
+                (name-beg (match-beginning 1)))
+            ;; `syntax-ppss' moves point to its argument; keep point here.
+            (unless (save-excursion (nth 8 (syntax-ppss name-beg)))
+              (push (cons name (if imenu-use-markers
+                                   (copy-marker name-beg t)
+                                 name-beg))
+                    labels))))
+        (nreverse labels))))
+  (defun my-asm-mode-hook ()
+    "Set up imenu and its xref backend for `asm-mode' buffers."
+    (setq-local imenu-create-index-function #'my/asm--imenu-create-index)
+    (modify-syntax-entry ?. "_")
+    (add-hook 'after-save-hook #'imenu-flush-cache nil t)
+    (add-hook 'after-revert-hook #'imenu-flush-cache nil t)
+    (add-hook 'xref-backend-functions #'basic/generic-mode-imenu-xref-backend nil t))
+  :hook ((asm-mode . my-prog-mode-hook)
+         (asm-mode . my-asm-mode-hook)))
 ;; }}}
 
 ;; {{{ Theming
