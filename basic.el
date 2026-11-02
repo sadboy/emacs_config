@@ -103,28 +103,37 @@ path."
   "Return the flattened entries of the current buffer's imenu index."
   (basic/imenu--flatten-index
    (assoc-delete-all "*Rescan*" (imenu--make-index-alist))))
+
+(defun basic/imenu--make-xref (path pos)
+  "Return an xref for PATH at POS in the current buffer.
+POS is a marker or an integer.  Use a file location when the
+buffer visits a file and a buffer location otherwise, so the
+index also works in buffers like compiler disassembly output."
+  (xref-make path
+             (if buffer-file-name
+                 (xref-make-file-location
+                  buffer-file-name
+                  (line-number-at-pos pos)
+                  (save-excursion (goto-char pos)
+                                  (- pos (line-beginning-position))))
+               (xref-make-buffer-location (current-buffer) pos))))
+
 (cl-defmethod xref-backend-definitions ((_backend (eql basic/imenu)) identifier)
   "Find IDENTIFIER among the entries of the current buffer's imenu index."
-  (when (buffer-file-name)
-    (let ((xrefs nil))
-      (dolist (entry (basic/imenu--index-entries))
-        (let ((path (nth 0 entry))
-              (leaf (nth 1 entry))
-              (pos (nth 2 entry)))
-          (when (basic/imenu--entry-match-p path leaf identifier)
-            (push (xref-make path
-                             (xref-make-file-location
-                              (buffer-file-name)
-                              (line-number-at-pos pos)
-                              (save-excursion (goto-char pos)
-                                              (- pos (line-beginning-position)))))
-                  xrefs))))
-      (nreverse xrefs))))
+  (let ((xrefs nil))
+    (dolist (entry (basic/imenu--index-entries))
+      (let ((path (nth 0 entry))
+            (leaf (nth 1 entry))
+            (pos (nth 2 entry)))
+        (when (basic/imenu--entry-match-p path leaf identifier)
+          (push (basic/imenu--make-xref path pos) xrefs))))
+    (nreverse xrefs)))
 
 (cl-defmethod xref-backend-identifier-completion-table ((_backend (eql basic/imenu)))
   "Complete against all entry names in the current buffer's imenu index."
   (let ((entries (basic/imenu--index-entries)))
     (delete-dups (append (mapcar #'car entries) (mapcar #'cadr entries)))))
+
 ;;;###autoload
 (defun bo-add-dir-local-variable ()
   (interactive)
