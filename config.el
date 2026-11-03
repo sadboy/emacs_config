@@ -1587,12 +1587,17 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   ;; (eshell-mode . #'with-editor-export-editor)
 
   :preface
-  (defun my/magit-diff-visit-worktree-file ()
-    (interactive)
-    (magit-diff-visit-worktree-file #'display-buffer))
-  (defun my/magit-diff-visit-file ()
-    (interactive)
-    (magit-diff-visit-file #'display-buffer))
+   (defun my/magit-diff-visit-file ()
+     "Visit file at point, letting `display-buffer' place it."
+     (interactive)
+     (magit-diff-visit-file--internal
+      (and magit-diff-visit-prefer-worktree
+           (memq (magit-diff--dwim) '(staged unstaged)))
+      #'display-buffer))
+
+   (defun my/magit-diff-visit-worktree-file ()
+     (interactive)
+     (magit-diff-visit-file--internal t #'display-buffer))
 
   :init
   (setq magit-tramp-pipe-stty-settings 'pty
