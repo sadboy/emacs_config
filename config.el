@@ -1226,6 +1226,11 @@ the translated key."
          '("^\\*pi-coding-agent-chat:.*\\*"
            (display-buffer-reuse-window
             display-buffer-same-window))
+         '("^\\*rmsbolt-output.*\\*"
+           (display-buffer-reuse-window
+            display-buffer-use-some-window
+            display-buffer--maybe-pop-up-window)
+           (inhibit-same-window t))
 
          ;; transient popup:
          `(,(format "^%s$" (regexp-quote (or (bound-and-true-p transient--buffer-name) " *transient*")))
