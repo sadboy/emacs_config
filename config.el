@@ -2392,8 +2392,11 @@ current buffer.
   )
 
 (use-package antlr-mode
+  :preface
+  (unless (fboundp 'antlr-v4-mode)
+    (defalias 'antlr-v4-mode #'antlr-mode))
   :mode
-  ("\\.g4\\'" . antlr-mode))
+  ("\\.g4\\'" . antlr-v4-mode))
 
 (use-package ahk-mode
   :ensure t
