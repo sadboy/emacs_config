@@ -2440,6 +2440,24 @@ current buffer.
   :init
   (setq rustic-lsp-client 'eglot)
 )
+(use-package rust-ts-mode
+  :preface
+  (defun my-rust-ts-comment-paragraphs ()
+    ;; `c-ts-common-comment-setup' misses `//!' lines in `paragraph-start'.
+    ;; Thus `fill-paragraph' joins all paragraphs of a `//!' doc block.
+    ;; The regexp below also matches `//!', `///!' and `/*!' lines.
+    (setq-local paragraph-start
+                (rx (or (seq (* (syntax whitespace))
+                             (or (seq "/" (+ "/") (? "!"))
+                                 (seq "/" "*" (* "*") (? "!"))
+                                 (* "*"))
+                             (* (syntax whitespace))
+                             eol)
+                        "\f")))
+    (setq-local paragraph-separate paragraph-start))
+  :hook
+  (rust-ts-mode . my-rust-ts-comment-paragraphs))
+
 (use-package toml-ts-mode
   :mode "\\.toml\\'")
 (use-package hack-mode
