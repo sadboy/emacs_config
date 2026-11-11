@@ -1627,6 +1627,11 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
    ("C-j" . #'my/magit-diff-visit-worktree-file)
    ("C-<return>" . #'my/magit-diff-visit-worktree-file)
    ("<remap> <magit-visit-thing>" . #'my/magit-diff-visit-file)
+
+   ;; Magit ships these two chunk-relative commands without bindings.
+   :map magit-blame-read-only-mode-map
+   ("v" . #'magit-blame-visit-file)
+   ("V" . #'magit-blame-visit-other-file)
    )
 
   :config
