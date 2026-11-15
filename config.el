@@ -1893,26 +1893,43 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   ;; rust-analyzer:
   (add-to-list 'eglot-semantic-token-modifiers "mutable")
 
-  ;; Eglot's Imenu visits the start of a DocumentSymbol's whole range, which
-  ;; includes leading doc comments and attributes.  Use the symbol's
-  ;; `selectionRange' (the item name) instead, like Eglot's `xref' commands
-  ;; do when they follow a `targetSelectionRange':
-  (defun my/eglot--imenu-use-selection-range (args)
-    "Prefer each DocumentSymbol's `selectionRange' over its `range' in ARGS."
-    (cl-labels ((normalize (symbol)
-                  (if-let* ((selection (plist-get symbol :selectionRange)))
-                      (let ((copy (plist-put (copy-sequence symbol)
-                                             :range selection)))
-                        (if (plist-member copy :children)
-                            (plist-put copy :children
-                                       (mapcar #'normalize
-                                               (plist-get copy :children)))
-                          copy))
-                    symbol)))
-      (list (mapcar #'normalize (car args)))))
+  ;; Eglot sets `breadcrumb-region' and Imenu positions from `:range'.
+  ;; This advice keeps `:range' in `breadcrumb-region' so breadcrumbs match
+  ;; the full block.  It also moves Imenu jump positions to `:selectionRange'.
+  (defun my/eglot--imenu-use-selection-range (orig res)
+    "Keep full `range' for breadcrumbs and jump to `selectionRange' in Imenu."
+    (let ((alist (funcall orig res)))
+      (cl-labels ((fixup (nodes symbols)
+                    (cl-loop for node in nodes
+                             for sym in (append symbols nil)
+                             for sel = (plist-get sym :selectionRange)
+                             for sel-pos = (and sel (car (eglot-range-region sel)))
+                             for children = (plist-get sym :children)
+                             collect
+                             (progn
+                               (when-let* ((reg (and sel-pos
+                                                     (get-text-property 0 'imenu-region (car node)))))
+                                 (put-text-property 0 (length (car node))
+                                                    'imenu-region (cons sel-pos (cdr reg))
+                                                    (car node)))
+                               (if (and (consp (cdr node)) children)
+                                   (cons (car node) (fixup (cdr node) children))
+                                 (if sel-pos
+                                     (cons (car node) sel-pos)
+                                   node))))))
+        (fixup alist res))))
 
-  (advice-add #'eglot--imenu-DocumentSymbol :filter-args
+  (advice-add #'eglot--imenu-DocumentSymbol :around
               #'my/eglot--imenu-use-selection-range)
+
+  (defun my/eglot--reset-breadcrumb-cache ()
+    "Clear cached Imenu and breadcrumb state when Eglot manages a buffer."
+    (when (eglot-managed-p)
+      (setq imenu--index-alist nil)
+      (when (boundp 'breadcrumb--last-update-tick)
+        (setq breadcrumb--last-update-tick 0))))
+
+  (add-hook 'eglot-managed-mode-hook #'my/eglot--reset-breadcrumb-cache)
 
   (setq eglot-autoshutdown t
         eglot-confirm-server-edits nil
