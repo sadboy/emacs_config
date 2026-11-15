@@ -12,19 +12,6 @@
               fill-column 80
               default-directory "~/")
 
-(setq switch-to-buffer-obey-display-actions t
-      ;; Make left and right side windows take full height:
-      window-sides-vertical t
-      split-width-threshold 160
-      split-height-threshold 80
-      )
-(setopt display-buffer-base-actions
-        '((display-buffer-reuse-window
-           display-buffer-in-previous-window
-           display-buffer-use-some-window
-           display-buffer--maybe-pop-up-window
-           display-buffer-same-window)
-          (reusable-frames . nil)))
 (add-to-list 'window-persistent-parameters '(no-delete-other-windows . writable))
 
 (setq package-enable-at-startup nil
@@ -1210,6 +1197,19 @@ the translated key."
         hydra-hint-display-type 'message)
   )
 
+(setq switch-to-buffer-obey-display-actions t
+      ;; Make left and right side windows take full height:
+      window-sides-vertical t
+      split-width-threshold 160
+      split-height-threshold 80
+      )
+(setopt display-buffer-base-action
+        '((display-buffer-reuse-window
+           display-buffer-in-previous-window
+           display-buffer-use-some-window
+           display-buffer--maybe-pop-up-window
+           display-buffer-same-window)
+          (reusable-frames . nil)))
 (use-package basic
   :after hydra
   :demand t
