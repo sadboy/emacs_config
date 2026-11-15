@@ -1893,6 +1893,19 @@ Like normal Emacs `C-k'.  Kill to end of line and put content in kill-ring."
   ;; rust-analyzer:
   (add-to-list 'eglot-semantic-token-modifiers "mutable")
 
+  ;; Upstream Eglot ignores `workspace/semanticTokens/refresh'.  This handler
+  ;; refreshes unedited buffers so `rust-analyzer' applies modifiers, for example
+  ;; `mutable', after the server loads the workspace.
+  (cl-defmethod eglot-handle-request :after
+    (server (_method (eql workspace/semanticTokens/refresh)))
+    (dolist (buffer (eglot--managed-buffers server))
+      (eglot--when-live-buffer buffer
+        (when (and (bound-and-true-p eglot-semantic-tokens-mode)
+                   (zerop eglot--docver))
+          (when eglot--semtok-state
+            (setf (plist-get eglot--semtok-state :docver) nil))
+          (eglot--widening (font-lock-flush))))))
+
   ;; Eglot sets `breadcrumb-region' and Imenu positions from `:range'.
   ;; This advice keeps `:range' in `breadcrumb-region' so breadcrumbs match
   ;; the full block.  It also moves Imenu jump positions to `:selectionRange'.
