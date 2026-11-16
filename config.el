@@ -943,7 +943,11 @@ items whose backend uses a custom `imenu-default-goto-function'."
   :config
   (setq consult-ripgrep-args
         "rg --null --line-buffered --color=never --max-columns=1000 --path-separator /\
-   --smart-case --no-heading --with-filename --line-number --hidden")
+   --smart-case --no-heading --with-filename --line-number --hidden\
+   --glob=!.git --glob=!.hg --glob=!.svn --glob=!.jj\
+   --glob=!.cache --glob=!.cpcache --glob=!.eln-cache --glob=!.direnv\
+   --glob=!.venv --glob=!.tox --glob=!.mypy_cache --glob=!.pytest_cache\
+   --glob=!.ruff_cache")
   (consult-customize
    consult-buffer :preview-key "M-."
    consult-theme :preview-key '(:debounce 0.2 any)
